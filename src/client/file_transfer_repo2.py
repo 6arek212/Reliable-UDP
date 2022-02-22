@@ -6,7 +6,7 @@ from rudp import RudpPacket
 
 IP = "192.168.1.21"
 PORT = 5000
-BUFFER_SIZE = 1024
+BUFFER_SIZE = 2048
 lock = threading.Lock()
 
 
@@ -20,6 +20,7 @@ class FileRepository2:
         self.is_paused = False
         self.callback = None
         self.file_name = None
+        self.rev_buffer = []
         self.seq = 0
 
     def get_file(self, filename, callback):
@@ -67,6 +68,42 @@ class FileRepository2:
 
         if self.seq == packet.content_len:
             self.shut_down()
+
+    # def write_to_file(self, buffer):
+    #     with open(self.file_name, 'ab') as f:
+    #         while buffer:
+    #             last = buffer.pop(0)
+    #             f.write(last.data)
+    #         self.seq = last.ack_num
+    #
+    # def handle_data(self, packet, address):
+    #     if packet.seqnum == self.seq:
+    #         # self.seq = packet.ack_num
+    #
+    #         if self.rev_buffer and self.rev_buffer[0].seqnum == packet.ack_num:
+    #             self.rev_buffer.insert(0, packet)
+    #             self.write_to_file(self.rev_buffer)
+    #         else:
+    #             self.write_to_file([packet])
+    #
+    #         percentage = int(self.seq / packet.content_len * 100)
+    #         self.callback(percentage)
+    #         print(self.seq, packet.seqnum, 'ACKED')
+    #
+    #     else:
+    #         print(f'out of order current seq {self.seq} got seq {packet.seqnum} ack num {packet.ack_num}')
+    #         if packet.seqnum > self.seq:
+    #             self.rev_buffer.append(packet)
+    #             self.rev_buffer.sort(key=lambda p: p.ack_num)
+    #         packet.ack_num = self.seq
+    #
+    #     packet.type = RudpPacket.TYPE_ACK
+    #     packet.data = None
+    #     packet.datalength = 0
+    #     self.udp_sock.sendto(packet.pack(), address)
+    #
+    #     if self.seq == packet.content_len:
+    #         self.shut_down()
 
     def shut_down(self):
         if self.udp_sock is not None:

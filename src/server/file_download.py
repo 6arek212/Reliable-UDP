@@ -8,7 +8,7 @@ from math import ceil
 from rudp import RudpPacket
 from timer import Timer
 
-BUFFER_SIZE = 1024
+BUFFER_SIZE = 4096
 FRAGMENT_SIZE = 500
 SLEEP_INTERVAL = 0.05
 
@@ -23,7 +23,7 @@ class FileDownload:
         self.ip = ip
         self.address = address
         self.state = None
-        self.time_out = 0.1
+        self.time_out = 0.5
         self.cwd = 1
         self.seq = 0
         self.send_cwnd = []
@@ -72,44 +72,57 @@ class FileDownload:
                     self.handle_acks(packet)
 
             except Exception as e:
-                print('listen_to_client',e)
+                print('listen_to_client', e)
+
+        print('done')
+        if self.seq == self.content_length:
+            self.shut_down()
+            self.finish_callback()
         print('listen stopped')
 
     def handle_acks(self, packet: RudpPacket):
         if self.is_paused:
             return
         self.mutex.acquire()
-        self.send_timer.stop()
-        print(f'packet {self.seq} {packet.ack_num}')
+
+        # print(f'packet {self.seq} {packet.ack_num}')
 
         if packet.ack_num > self.seq:
             self.seq = packet.ack_num
+            self.send_timer.stop()
 
             if self.seq == self.last_packet_in_cwd.ack_num:
+                # if self.cwd < 64:
                 self.cwd *= 2
                 self.dup_ack_cnt = 0
             print(f'packet {self.seq} was ACKED')
 
         elif packet.ack_num == self.seq:
-            print('may be a packet was lost or took longer time')
+            print(f'may be a packet was lost or took longer time seq {self.seq}  packet ack {packet.ack_num}')
             self.dup_ack_cnt += 1
             if self.dup_ack_cnt == 3:
                 self.cwd /= 2
                 print(f'3 duplicate ACKs sending : {packet.ack_num}')
+
+        if self.content_length == self.seq:
+            self.is_paused = True
         self.mutex.release()
 
     def load_packets(self):
         if self.content_length == self.seq:
-            return False
+            return
 
         try:
             file = open(f'data/{self.file_name}', 'rb')
         except IOError:
             print('Unable to open  file')
-            return False
+            self.shut_down()
+            self.finish_callback()
+            return
 
         i = 0
         datalen = 0
+        print('loading packets cwnd size ', len(self.send_cwnd))
         while len(self.send_cwnd) < self.cwd and self.seq + datalen < self.content_length:
             packet_sent_cnt = ceil(self.seq / FRAGMENT_SIZE)
             file.seek(FRAGMENT_SIZE * (packet_sent_cnt + i))
@@ -123,22 +136,19 @@ class FileDownload:
             datalen += len(data)
             self.send_cwnd.append(packet)
             i += 1
+
         self.last_packet_in_cwd = self.send_cwnd[len(self.send_cwnd) - 1]
         file.close()
-        return True
 
     def send_file(self):
         print('sending length ', self.seq, self.content_length, ' is paused ', self.is_paused)
         while self.seq < self.content_length and not self.is_paused:
             self.mutex.acquire()
-            if not self.load_packets():
-                print('done')
-                self.finish_callback()
-                break
+            self.load_packets()
 
             # Send all the packets in the window
             while self.send_cwnd:
-                # print('Sending packet', self.send_cwnd[0].seqnum, self.seq)
+                print('Sending packet', self.send_cwnd[0].seqnum, self.seq)
                 self.socket.sendto(self.send_cwnd.pop(0).pack(), self.address)
 
             # Start the timer
@@ -155,16 +165,13 @@ class FileDownload:
 
             if self.send_timer.timeout():
                 # Looks like we timed out
-                # print('Timeout')
+                print('Timeout')
+                self.cwd = 1
                 self.send_timer.stop()
 
             self.mutex.release()
 
-        if self.seq == self.content_length:
-            print('done')
-            self.shut_down()
-            self.finish_callback()
-
     def shut_down(self):
         self.socket.shutdown(socket.SHUT_RDWR)
+        self.is_paused = True
         self.socket.close()
