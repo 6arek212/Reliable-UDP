@@ -1,6 +1,7 @@
 import socket
 import threading
 
+from file_transfer_repo3 import FileRepository3
 from file_transfer_repo2 import FileRepository2
 
 IP = "192.168.1.21"
@@ -12,7 +13,7 @@ class Repository:
     def __init__(self, callback) -> None:
         self.sock = None
         self.name = None
-        self.fr:FileRepository2 = None
+        self.fr:FileRepository3 = None
         self.is_connected = False
         self.callback = callback
 
@@ -70,7 +71,7 @@ class Repository:
     def get_file(self, filename, callback):
         if not self.is_connected or not filename:
             raise Exception('you need to connect to the server first ! or check filename')
-        self.fr = FileRepository2(self.sock)
+        self.fr = FileRepository3(self.sock)
         self.fr.get_file(filename, callback)
 
     def pause_download(self):

@@ -60,6 +60,14 @@ class RudpPacket:
         self.data = None
         self.ack_num = 0
         self.content_len = 0
+        self.is_sent = False
+
+    def __str__(self):
+        return f'{{ seq : {self.seqnum} , ack_num :{self.ack_num}}}'
+
+    def __repr__(self):
+        return f'{{ seq : {self.seqnum} , ack_num :{self.ack_num}}}'
+
 
     def pack(self):
         

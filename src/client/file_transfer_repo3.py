@@ -6,11 +6,11 @@ from rudp import RudpPacket
 
 IP = "192.168.1.21"
 PORT = 5000
-BUFFER_SIZE = 4048
+BUFFER_SIZE = 4096
 lock = threading.Lock()
 
 
-class FileRepository2:
+class FileRepository3:
 
     def __init__(self, sock):
         self.sock = sock
@@ -22,6 +22,9 @@ class FileRepository2:
         self.file_name = None
         self.rev_buffer = []
         self.seq = 0
+        self.mutex = threading.Lock()
+        self.cnt = 0
+
 
     def get_file(self, filename, callback):
         self.file_name = filename
@@ -36,30 +39,46 @@ class FileRepository2:
         self.sock.send(
             f'{{"type":"get_file" , "filename":"{filename}" , "port":"{self.udp_sock.getsockname()[1]}"}}'.encode())
         threading.Thread(target=self.listen_for_udp).start()
+        threading.Thread(target=self.buffer_handler()).start()
+
 
     def listen_for_udp(self):
         while not self.is_done:
             try:
                 data, address = self.udp_sock.recvfrom(BUFFER_SIZE)
-                packet = RudpPacket().unpack(data)
-                if packet.type == RudpPacket.TYPE_DATA:
-                    self.handle_data(packet, address)
+                self.rev_buffer.append((data,address))
             except Exception as e:
                 print(e)
 
         self.is_working = False
 
+
+    def buffer_handler(self):
+        while not self.is_done:
+            if self.rev_buffer:
+                data ,address = self.rev_buffer.pop(0)
+                packet = RudpPacket().unpack(data)
+                if packet.type == RudpPacket.TYPE_DATA:
+                    self.handle_data(packet, address)
+
+
+
+
     def handle_data(self, packet, address):
         if packet.seqnum == self.seq:
             self.seq = packet.ack_num
-            percentage = int(self.seq / packet.content_len * 100)
-            self.callback(percentage)
-            print(self.seq, packet.seqnum , packet.ack_num, 'ACKED')
             with open(self.file_name, 'ab') as f:
                 f.write(packet.data)
+            self.cnt+=1
+            print(self.seq, packet.seqnum, packet.ack_num, 'ACKED')
+            self.cnt = 0
+            percentage = self.seq / packet.content_len * 100
+            self.callback(percentage)
+
         else:
             print(f'out of order current seq {self.seq} got seq {packet.seqnum} ack num {packet.ack_num}')
             packet.ack_num = self.seq
+
 
         packet.type = RudpPacket.TYPE_ACK
         packet.data = None

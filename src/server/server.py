@@ -6,6 +6,9 @@ from os.path import isfile, join
 import os
 
 from file_download import FileDownload
+from file_download2 import FileDownload2
+from file_download3 import FileDownload3
+from file_download4 import FileDownload4
 
 PORT = 5000
 IP = "192.168.1.21"
@@ -105,7 +108,7 @@ def handle_data(client_socket, data):
                 print(clients_download.get(client_socket) is None)
                 if clients_download.get(client_socket) is None:
                     print('got file download req', (client_socket.getsockname()[0], int(dj['port'])))
-                    fd = FileDownload(dj['filename'], IP, (client_socket.getsockname()[0], int(dj['port'])),
+                    fd = FileDownload2(dj['filename'], IP, (client_socket.getsockname()[0], int(dj['port'])),
                                       lambda: delete_file_downloader(client_socket))
                     fd.start()
                     clients_download[client_socket] = fd
