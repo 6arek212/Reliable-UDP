@@ -51,7 +51,7 @@ class FileDownload:
     def start(self):
         """
         Main starting point for the file downloader ,
-         starts 2 threads one for sending the file , and the other for listening for client
+         starts 2 threads one for sending the file , and the other for listening for client_files
         :return: None
         """
         try:
@@ -87,7 +87,7 @@ class FileDownload:
 
     def listen_to_client(self):
         """
-        Separate thread for listening for client
+        Separate thread for listening for client_files
         :return: None
         """
         while self.state != FileDownload.END:
@@ -111,7 +111,7 @@ class FileDownload:
 
                 else:
                     if packet.seqnum > packet.ack_num:
-                        print(f'ack_num < seqnum , Looks like client holding packet till   {packet.seqnum}')
+                        print(f'ack_num < seqnum , Looks like client_files holding packet till   {packet.seqnum}')
                     else:
                         print(f'packet was thrown we are in DUPLICATE state {packet.seqnum}   {packet.ack_num}')
                         self.remove_acked_packets(packet.seqnum)
@@ -302,7 +302,7 @@ class FileDownload:
         if tries > 0:
             self.fin_request()
         else:
-            print('Tries 0 , Looks like client is dead')
+            print('Tries 0 , Looks like client_files is dead')
             self.shut_down()
 
     def load_and_send_packets(self):

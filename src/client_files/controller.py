@@ -1,7 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
-from client.repository import Repository
+from client_files.repository import Repository
 import threading
-import client.events as events
+import client_files.events as events
 
 
 class Controller:

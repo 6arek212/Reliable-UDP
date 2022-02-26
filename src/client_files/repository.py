@@ -1,7 +1,7 @@
 import socket
 import threading
 
-from client.file_transfer_repo import FileRepository
+from client_files.file_transfer_repo import FileRepository
 
 IP = "192.168.1.21"
 PORT = 5000

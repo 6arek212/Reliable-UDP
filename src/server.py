@@ -59,7 +59,7 @@ def send_to(to, msg):
 def delete_file_downloader(client_sock):
     try:
         if client_sock in clients_download:
-            print('remove file downloader for this client')
+            print('remove file downloader for this client_files')
             clients_download.pop(client_sock)
     except Exception as e:
         print('remove file downloader failed', e)

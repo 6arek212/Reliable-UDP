@@ -1,7 +1,7 @@
 from tkinter import *
 from tkinter import ttk
-import client.events as events
-from client.controller import Controller
+import client_files.events as events
+from client_files.controller import Controller
 
 
 def callback(data):
