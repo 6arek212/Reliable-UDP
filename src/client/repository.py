@@ -2,7 +2,6 @@ import socket
 import threading
 
 from file_transfer_repo3 import FileRepository3
-from file_transfer_repo2 import FileRepository2
 
 IP = "192.168.1.21"
 PORT = 5000
@@ -13,8 +12,8 @@ class Repository:
     def __init__(self, callback) -> None:
         self.sock = None
         self.name = None
-        self.fr:FileRepository3 = None
         self.is_connected = False
+        self.fr = None
         self.callback = callback
 
     def connect_to_server(self, ip, name):
@@ -71,14 +70,16 @@ class Repository:
     def get_file(self, filename, callback):
         if not self.is_connected or not filename:
             raise Exception('you need to connect to the server first ! or check filename')
+        if self.fr is not None and self.fr.state != FileRepository3.DONE:
+            return
         self.fr = FileRepository3(self.sock)
         self.fr.get_file(filename, callback)
 
     def pause_download(self):
         if not self.is_connected or self.fr is None:
             raise Exception('you need to connect to the server first !')
-        print('pausing !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        self.fr.is_paused = not self.fr.is_paused
+        self.fr.pause()
+        print('pausing !', self.fr.is_paused)
         val = 'true' if self.fr.is_paused else 'false'
         self.sock.send(
             f'{{"type":"pause_download","val":{val}}}'.encode())

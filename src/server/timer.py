@@ -4,12 +4,13 @@ import time
 class Timer(object):
     TIMER_STOP = -1
 
-    def __init__(self, duration):
+    def __init__(self,duration):
         self._start_time = self.TIMER_STOP
         self._duration = duration
 
     # Starts the timer
-    def start(self):
+    def start(self , duration):
+        self._duration = duration
         if self._start_time == self.TIMER_STOP:
             self._start_time = time.time()
 

@@ -35,14 +35,16 @@ def send_message():
 
 
 def handle_download_btn(per):
-    if isinstance(per,int):
-        file_dow_per.config(text=f'{per}%')
-        if 0 < per < 100:
-            download_btn.config(text='Pause')
-        else:
-            download_btn.config(text='Download')
+    if isinstance(per , str ):
+        file_dow_per.config(text=per)
+        download_btn.config(text='Download')
+        return
+
+    file_dow_per.config(text='%.2f' % per)
+    if 0 < per < 100:
+        download_btn.config(text='Pause')
     else:
-        file_dow_per.config(text=f'{per}')
+        download_btn.config(text='Download')
 
 def download_file():
     print(download_btn['text'])

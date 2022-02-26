@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from repository import Repository
 import threading
 import events
@@ -9,10 +10,13 @@ class Controller:
         self.__repo = Repository(callback)
         self.col = 0
         self.is_connected = False
+        self.mutex = threading.Lock()
 
     def trigger_event(self, event):
-        t1 = threading.Thread(target=self.__event_handler, args=(event,))
-        t1.start()
+        executor = ThreadPoolExecutor(max_workers=1)
+        executor.submit(self.__event_handler, event)
+        # t1 = threading.Thread(target=self.__event_handler, args=(event,))
+        # t1.start()
 
     def __event_handler(self, event):
         if event is None:
@@ -53,8 +57,8 @@ class Controller:
     def get_files(self):
         self.__repo.get_files_list()
 
-    def download_file(self,filename , callback):
-        self.__repo.get_file(filename , callback)
+    def download_file(self, filename, callback):
+        self.__repo.get_file(filename, callback)
 
     def __connect_to_server(self, ip, name):
         self.__repo.connect_to_server(ip, name)

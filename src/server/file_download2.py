@@ -64,14 +64,14 @@ class FileDownload2:
             # self.socket.shutdown(socket.SHUT_RDWR)
             self.state = PAUSE
             self.send_buffer = []
-            self.cwd = 1
+            self.cwd = FRAGMENT_SIZE
+            self.ssthresh = FRAGMENT_SIZE * 8
             self.dup_ack_cnt = 0
         if val is False:
             self.state = None
-            # self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            # self.socket.bind((self.ip, 0))
+            self.cv.acquire()
             self.cv.notify_all()
-            # self.start()
+            self.cv.release()
 
     #
     # def recv_buffer_handler(self):
@@ -105,10 +105,12 @@ class FileDownload2:
     #
 
     def listen_to_client(self):
-        while self.state != END:
+        tries = MAX_TRIES
+        while self.state != END and tries != 0:
             try:
                 data = self.socket.recv(BUFFER_SIZE)
                 packet = RudpPacket().unpack(data)
+                tries = MAX_TRIES
 
                 if not ((
                                 packet.type == RudpPacket.TYPE_ACK and self.state == DUPLICATE_EVENT and packet.ack_num == self.seq) or packet.seqnum > packet.ack_num):
@@ -130,17 +132,21 @@ class FileDownload2:
                         self.remove_acked_packets(packet.seqnum)
             except socket.timeout as e:
                 print('listen_to_client', e)
-                self.send_all_wind = True
-                self.ssthresh = self.cwd / 2
-                self.cwd = FRAGMENT_SIZE * 10
-                self.dup_ack_cnt = 0
-
-
-            except Exception as e:
-                print('listen_to_client', e)
-                if self.state == PAUSE:
+                tries -= 1
+                while self.state == PAUSE:
                     self.cv.acquire()
                     self.cv.wait()
+                    self.cv.release()
+                else:
+                    self.send_all_wind = True
+                    self.ssthresh = self.cwd / 2
+                    self.cwd = FRAGMENT_SIZE * 10
+                    self.dup_ack_cnt = 0
+            except Exception as e:
+                print('listen_to_client', e)
+
+        if tries == 0:
+            self.shut_down()
 
         print('listen stopped')
 
@@ -247,7 +253,14 @@ class FileDownload2:
         while self.seq < self.content_length and self.state != END:
             if self.recv_wnd_size > FRAGMENT_SIZE + 30:
                 self.mutex.acquire()
+                if self.state == END:
+                    break
                 try:
+                    while self.state == PAUSE:
+                        self.cv.acquire()
+                        self.cv.wait()
+                        self.cv.release()
+
                     if self.send_all_wind:
                         print(
                             f'send all wnd cwnd {ceil(self.cwd / FRAGMENT_SIZE)}  ssthresh {self.ssthresh / FRAGMENT_SIZE} buffer size {len(self.send_buffer)} revwind {self.recv_wnd_size}')

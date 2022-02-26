@@ -107,12 +107,12 @@ def handle_data(client_socket, data):
                 print(clients_download.get(client_socket) is None)
                 if clients_download.get(client_socket) is None:
                     print('got file download req', (client_socket.getsockname()[0], int(dj['port'])))
-                    fd = FileDownload2(dj['filename'], IP, (client_socket.getsockname()[0], int(dj['port'])),
+                    fd = FileDownload3(dj['filename'], IP, (client_socket.getsockname()[0], int(dj['port'])),
                                       lambda: delete_file_downloader(client_socket))
                     fd.start()
                     clients_download[client_socket] = fd
                 else:
-                    if clients_download.get(client_socket).is_paused:
+                    if clients_download.get(client_socket).state == FileDownload3.PAUSE:
                         clients_download.get(client_socket).set_is_paused(False)
 
         return True
