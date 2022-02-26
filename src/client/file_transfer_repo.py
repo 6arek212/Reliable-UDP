@@ -14,7 +14,7 @@ MAX_TIME_OUT = 10
 FRAGMENT_SIZE = 500
 
 
-class FileRepository3:
+class FileRepository:
     DONE = 1
 
     def __init__(self, sock):
