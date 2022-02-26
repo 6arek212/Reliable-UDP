@@ -28,14 +28,13 @@ def get_files():
     controller.trigger_event(events.GetFiles())
 
 
-
 def send_message():
     controller.trigger_event(events.Message(
         msg=msg_e.get(), to=to_e.get().strip()))
 
 
 def handle_download_btn(per):
-    if isinstance(per , str ):
+    if isinstance(per, str):
         file_dow_per.config(text=per)
         download_btn.config(text='Download')
         return
@@ -46,10 +45,11 @@ def handle_download_btn(per):
     else:
         download_btn.config(text='Download')
 
+
 def download_file():
     print(download_btn['text'])
     if download_btn['text'] == 'Download':
-        controller.trigger_event(events.DownloadFile(file_name_en.get(), lambda per:handle_download_btn(per)))
+        controller.trigger_event(events.DownloadFile(file_name_en.get(), lambda per: handle_download_btn(per)))
     else:
         controller.trigger_event(events.PauseDownload())
 

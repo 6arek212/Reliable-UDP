@@ -62,7 +62,7 @@ class Controller:
 
     def __connect_to_server(self, ip, name):
         self.__repo.connect_to_server(ip, name)
-        if self.__repo.is_connected == True:
+        if self.__repo.is_connected:
             self.is_connected = True
 
     def __send_msg(self, msg):
@@ -73,5 +73,5 @@ class Controller:
 
     def __close_connection(self):
         self.__repo.disconnect()
-        if self.__repo.is_connected == False:
+        if not self.__repo.is_connected:
             self.is_connected = False

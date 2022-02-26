@@ -114,7 +114,6 @@ class FileDownload:
                         print(f'packet was thrown we are in DUPLICATE state {packet.seqnum}   {packet.ack_num}')
                         self.remove_acked_packets(packet.seqnum)
 
-
             except socket.timeout as e:
                 print('listen_to_client', e)
                 if self.state != FileDownload.PAUSE:
@@ -127,8 +126,6 @@ class FileDownload:
                     self.lock.acquire()
                     self.lock.wait()
                     self.lock.release()
-
-
 
             except Exception as e:
                 print('listen_to_client', e)
@@ -218,7 +215,8 @@ class FileDownload:
         Send all the packets in the current window
         """
         print(
-            f'send all wnd cwnd {ceil(self.cwd / FRAGMENT_SIZE)}  ssthresh {self.ssthresh / FRAGMENT_SIZE} buffer size {len(self.send_buffer)} revwind {self.recv_wnd_size}')
+            f'send all wnd cwnd {ceil(self.cwd / FRAGMENT_SIZE)}  ssthresh {self.ssthresh / FRAGMENT_SIZE} buffer size'
+            f' {len(self.send_buffer)} revwind {self.recv_wnd_size}')
         i = 0
         flag = True
         for pkt in self.send_buffer:

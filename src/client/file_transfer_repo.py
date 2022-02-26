@@ -1,8 +1,6 @@
 import random
 import socket
 import threading
-from pprint import pprint
-from time import sleep
 
 from rudp import RudpPacket
 
@@ -74,17 +72,17 @@ class FileRepository:
             try:
                 data, address = self.udp_sock.recvfrom(BUFFER_SIZE)
                 self.lock.acquire()
-                ra = random.uniform(0, 1)
-
-                if ra < 0.95:
-                    if self.recv_buffer_size + len(data) < BUFFER_SIZE:
-                        self.recv_buffer_size += len(data)
-                        self.rev_buffer.append((data, address))
-                    else:
-                        packet = RudpPacket().unpack(data)
-                        print('packet was thrown because buffer is full ', packet)
+                # ra = random.uniform(0, 1)
+                #
+                # if ra < 0.95:
+                if self.recv_buffer_size + len(data) < BUFFER_SIZE:
+                    self.recv_buffer_size += len(data)
+                    self.rev_buffer.append((data, address))
                 else:
-                    print('throw')
+                    packet = RudpPacket().unpack(data)
+                    print('packet was thrown because buffer is full ', packet)
+                # else:
+                #     print('throw')
                 self.lock.release()
             except socket.timeout as e:
                 print(e, self.is_paused)
@@ -95,8 +93,9 @@ class FileRepository:
                     self.lock.acquire()
                     self.lock.wait()
                     self.lock.release()
+
             except Exception as e:
-                print('listening stopped')
+                print('listening stopped', e)
 
     def buffer_handler(self):
         """
@@ -166,7 +165,6 @@ class FileRepository:
             p.recv_wnd = 0
 
         if packet.seqnum == self.seq:
-            self.cnt = 0
             self.recv_wnd[packet.seqnum] = packet
             self.write_to_file()
             percentage = self.seq / packet.content_len * 100
@@ -177,7 +175,6 @@ class FileRepository:
         else:
             '''ACKS may get lost !!'''
             print(f'out of order current seq {self.seq} got seq {packet.seqnum} ack num {packet.ack_num}')
-            self.cnt += 1
             if packet.seqnum > self.seq:
                 self.recv_wnd[packet.seqnum] = packet
                 p.ack_num = self.seq
