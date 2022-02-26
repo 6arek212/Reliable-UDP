@@ -24,6 +24,7 @@ class FileDownload3:
     PAUSE = 3
     END = 4
     DUPLICATE_EVENT = 1
+    FAST_TRANSMIT = 2
 
     def __init__(self, file_name, ip, address, finish_callback):
         self.finish_callback = finish_callback
@@ -157,12 +158,13 @@ class FileDownload3:
         if packet.ack_num > self.seq:
             if self.send_timer.running():
                 self.rtt = (1 - ALPHA) * self.rtt + ALPHA * (time.time() - self.send_timer._start_time)
-                print(f'new RTT {(time.time() - self.send_timer._start_time)}  {self.rtt}')
+                print(f'new RTT {self.rtt}')
 
             self.send_timer.stop()
-            if self.state == FileDownload3.DUPLICATE_EVENT:
+            if self.state == FileDownload3.FAST_TRANSMIT:
                 self.cwd = self.ssthresh
-                print('FAST RECOVERY FileDownload3.ENDS')
+                self.state = None
+                print('FAST RECOVERY ENDS')
 
             self.seq = packet.ack_num
             self.remove_acked_packets(packet.ack_num)
@@ -200,6 +202,7 @@ class FileDownload3:
         self.cwd = self.ssthresh + 3 * FRAGMENT_SIZE
         self.socket.sendto(self.send_buffer[0].pack(), self.address)
         self.send_timer.start(self.rtt)
+        self.state = FileDownload3.FAST_TRANSMIT
 
     def time_out_event(self):
         """

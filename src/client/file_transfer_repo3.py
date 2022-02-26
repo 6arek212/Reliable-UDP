@@ -10,7 +10,8 @@ IP = "192.168.1.21"
 PORT = 5000
 BUFFER_SIZE = 10000
 lock = threading.Lock()
-MAX_TIME_OUT = 5
+MAX_TIME_OUT = 10
+FRAGMENT_SIZE = 500
 
 
 class FileRepository3:
@@ -74,15 +75,17 @@ class FileRepository3:
                 data, address = self.udp_sock.recvfrom(BUFFER_SIZE)
                 self.lock.acquire()
                 ra = random.uniform(0, 1)
-                # if ra < 0.95:
-                if self.recv_buffer_size + len(data) < BUFFER_SIZE:
-                    self.recv_buffer_size += len(data)
-                    self.rev_buffer.append((data, address))
-                else:
-                    packet = RudpPacket().unpack(data)
-                    print('packet was thrown because buffer is full ', packet)
-                self.lock.release()
 
+                if ra < 0.95:
+                    if self.recv_buffer_size + len(data) < BUFFER_SIZE:
+                        self.recv_buffer_size += len(data)
+                        self.rev_buffer.append((data, address))
+                    else:
+                        packet = RudpPacket().unpack(data)
+                        print('packet was thrown because buffer is full ', packet)
+                else:
+                    print('throw')
+                self.lock.release()
             except socket.timeout as e:
                 print(e, self.is_paused)
                 if not self.is_paused:
