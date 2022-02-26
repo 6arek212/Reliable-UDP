@@ -28,8 +28,7 @@ class FileRepository3:
         self.recv_wnd = {}
         self.recv_buffer_size = 0
         self.seq = 0
-        self.cv = threading.Lock()
-        self.cv = threading.Condition()
+        self.lock = threading.Condition()
 
     def get_file(self, filename, callback):
         """
@@ -60,10 +59,10 @@ class FileRepository3:
         """
         self.is_paused = not self.is_paused
         if not self.is_paused:
-            self.cv.acquire()
+            self.lock.acquire()
             self.state = None
-            self.cv.notify_all()
-            self.cv.release()
+            self.lock.notify_all()
+            self.lock.release()
 
     def listen_for_udp(self):
         """
@@ -73,7 +72,7 @@ class FileRepository3:
         while self.state != FileRepository3.DONE:
             try:
                 data, address = self.udp_sock.recvfrom(BUFFER_SIZE)
-                self.cv.acquire()
+                self.lock.acquire()
                 ra = random.uniform(0, 1)
                 # if ra < 0.95:
                 if self.recv_buffer_size + len(data) < BUFFER_SIZE:
@@ -82,7 +81,7 @@ class FileRepository3:
                 else:
                     packet = RudpPacket().unpack(data)
                     print('packet was thrown because buffer is full ', packet)
-                self.cv.release()
+                self.lock.release()
 
             except socket.timeout as e:
                 print(e, self.is_paused)
@@ -90,9 +89,9 @@ class FileRepository3:
                     self.shut_down()
 
                 while self.is_paused:
-                    self.cv.acquire()
-                    self.cv.wait()
-                    self.cv.release()
+                    self.lock.acquire()
+                    self.lock.wait()
+                    self.lock.release()
             except Exception as e:
                 print('listening stopped')
 
@@ -103,11 +102,11 @@ class FileRepository3:
         while self.state != FileRepository3.DONE:
             try:
                 while self.is_paused:
-                    self.cv.acquire()
-                    self.cv.wait()
-                    self.cv.release()
+                    self.lock.acquire()
+                    self.lock.wait()
+                    self.lock.release()
 
-                self.cv.acquire()
+                self.lock.acquire()
                 if self.rev_buffer:
                     data, address = self.rev_buffer.pop(0)
                     self.recv_buffer_size -= len(data)
@@ -124,7 +123,7 @@ class FileRepository3:
                         p.seqnum = 0
                         self.udp_sock.sendto(p.pack(), address)
                         self.shut_down()
-                self.cv.release()
+                self.lock.release()
             except Exception as e:
                 print('buffer_handler', e)
 

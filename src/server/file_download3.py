@@ -13,16 +13,17 @@ BUFFER_SIZE = 10000
 FRAGMENT_SIZE = 500
 SLEEP_INTERVAL = 0.05
 
+HEADER_SIZE = 32
 MAX_TIME_OUT = 5
-DUPLICATE_EVENT = 1
-WAIT_FOR_WND_PASS = 2
 SHUT_DOWN = 5
 MAX_TRIES = 10
 ALPHA = 0.125
 
+
 class FileDownload3:
     PAUSE = 3
     END = 4
+    DUPLICATE_EVENT = 1
 
     def __init__(self, file_name, ip, address, finish_callback):
         self.finish_callback = finish_callback
@@ -36,56 +37,66 @@ class FileDownload3:
         self.cwd = FRAGMENT_SIZE
         self.ssthresh = FRAGMENT_SIZE * 8
         self.seq = 0
-        # self.rev_buffer = []
         self.recv_buffer_size = 0
         self.send_buffer = []
         self.content_length = 0
         self.dup_ack_cnt = 0
         self.send_all_wind = False
         self.recv_wnd_size = BUFFER_SIZE
-        # self.cv = threading.Lock()
-        self.recv_lock = threading.Lock()
         self.rtt = 0.5
         self.send_timer = Timer(self.rtt)
-        self.cv = threading.Condition()
+        self.lock = threading.Condition()
 
     def start(self):
+        """
+        Main starting point for the file downloader ,
+         starts 2 threads one for sending the file , and the other for listening for client
+        :return: None
+        """
         try:
             self.content_length = os.stat(f'data/{self.file_name}').st_size
         except Exception as e:
             print(e)
             return
-        # threading.Thread(target=self.recv_buffer_handler).start()
         threading.Thread(target=self.listen_to_client).start()
         threading.Thread(target=self.send_file).start()
 
     def set_is_paused(self, val):
-        print('pausing !!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        """
+        Pause file downloader
+        :param val: True , False
+        :return: None
+        """
+        print(f'Pausing ! , seq {self.seq}')
         if val:
             self.state = FileDownload3.PAUSE
             self.send_timer.stop()
             self.send_all_wind = False
 
         if val is False:
-            self.cv.acquire()
+            self.lock.acquire()
             self.send_buffer = []
             self.cwd = FRAGMENT_SIZE
             self.ssthresh = FRAGMENT_SIZE * 8
             self.dup_ack_cnt = 0
             self.recv_wnd_size = BUFFER_SIZE
             self.state = None
-            self.cv.notify_all()
-            self.cv.release()
-
+            self.lock.notify_all()
+            self.lock.release()
 
     def listen_to_client(self):
+        """
+        Separate thread for listening for client
+        :return: None
+        """
         while self.state != FileDownload3.END:
             try:
                 data = self.socket.recv(BUFFER_SIZE)
                 packet = RudpPacket().unpack(data)
 
-                if not ((packet.type == RudpPacket.TYPE_ACK and self.state == DUPLICATE_EVENT and packet.ack_num == self.seq) or packet.seqnum > packet.ack_num):
-                    self.cv.acquire()
+                if not ((
+                                packet.type == RudpPacket.TYPE_ACK and self.state == FileDownload3.DUPLICATE_EVENT and packet.ack_num == self.seq) or packet.seqnum > packet.ack_num):
+                    self.lock.acquire()
 
                     if packet.type == RudpPacket.TYPE_ACK:
                         self.handle_acks(packet)
@@ -93,11 +104,11 @@ class FileDownload3:
                     if packet.type == RudpPacket.TYPE_FINACK:
                         print('FINACK')
                         self.state = FileDownload3.END
-                    self.cv.release()
+                    self.lock.release()
 
                 else:
                     if packet.seqnum > packet.ack_num:
-                        print(f'ack_num < seqnum {packet.seqnum}   {packet.ack_num}')
+                        print(f'ack_num < seqnum , Looks like client holding packet till   {packet.seqnum}')
                     else:
                         print(f'packet was thrown we are in DUPLICATE state {packet.seqnum}   {packet.ack_num}')
                         self.remove_acked_packets(packet.seqnum)
@@ -106,15 +117,15 @@ class FileDownload3:
             except socket.timeout as e:
                 print('listen_to_client', e)
                 if self.state != FileDownload3.PAUSE:
-                    self.cv.acquire()
+                    self.lock.acquire()
                     self.state = FileDownload3.END
                     self.shut_down()
-                    self.cv.release()
+                    self.lock.release()
 
                 while self.state == FileDownload3.PAUSE:
-                    self.cv.acquire()
-                    self.cv.wait()
-                    self.cv.release()
+                    self.lock.acquire()
+                    self.lock.wait()
+                    self.lock.release()
 
 
 
@@ -124,10 +135,20 @@ class FileDownload3:
         print('listen stopped')
 
     def remove_acked_packets(self, ack_num):
+        """
+        Removing all packets from send_buffer that already ACKed
+        :param ack_num: sequence number of last ACK
+        :return: None
+        """
         while self.send_buffer and self.send_buffer[0].ack_num <= ack_num:
             self.send_buffer.pop(0)
 
     def handle_acks(self, packet: RudpPacket):
+        """
+        Handle incoming ACK packets
+        :param packet: ACK packet
+        :return: None
+        """
         if self.state == FileDownload3.END or self.state == FileDownload3.PAUSE:
             return
 
@@ -139,8 +160,7 @@ class FileDownload3:
                 print(f'new RTT {(time.time() - self.send_timer._start_time)}  {self.rtt}')
 
             self.send_timer.stop()
-            if self.state == DUPLICATE_EVENT:
-                self.state = WAIT_FOR_WND_PASS
+            if self.state == FileDownload3.DUPLICATE_EVENT:
                 self.cwd = self.ssthresh
                 print('FAST RECOVERY FileDownload3.ENDS')
 
@@ -164,10 +184,134 @@ class FileDownload3:
             self.dup_ack_cnt += 1
             if self.dup_ack_cnt == 3 and not self.send_all_wind:
                 if self.send_buffer and packet.ack_num == self.send_buffer[0].seqnum:
-                    self.state = DUPLICATE_EVENT
+                    self.state = FileDownload3.DUPLICATE_EVENT
                 self.dup_ack_cnt = 0
 
-    def load_packets(self):
+
+
+
+    def duplicate_event(self):
+        """
+        Duplicated packets event handling
+        """
+        print(
+            f'3 duplicate ACKs  fast transmit : first in buffer {self.send_buffer[0].seqnum}')
+        self.ssthresh /= 2
+        self.cwd = self.ssthresh + 3 * FRAGMENT_SIZE
+        self.socket.sendto(self.send_buffer[0].pack(), self.address)
+        self.send_timer.start(self.rtt)
+
+    def time_out_event(self):
+        """
+        Timeout event handling
+        """
+        print('Timeout')
+        self.send_timer.stop()
+        self.send_all_wind = True
+        self.cwd = FRAGMENT_SIZE
+        self.ssthresh = FRAGMENT_SIZE * 8
+        self.dup_ack_cnt = 0
+
+
+    def send_all_window(self):
+        """
+        Send all the packets in the current window
+        """
+        print(
+            f'send all wnd cwnd {ceil(self.cwd / FRAGMENT_SIZE)}  ssthresh {self.ssthresh / FRAGMENT_SIZE} buffer size {len(self.send_buffer)} revwind {self.recv_wnd_size}')
+        i = 0
+        flag = True
+        for pkt in self.send_buffer:
+            if i < ceil(self.cwd / FRAGMENT_SIZE) and flag:
+                pkt.recv_wnd = BUFFER_SIZE - self.recv_buffer_size
+                self.socket.sendto(pkt.pack(), self.address)
+                print('Sending all packet', pkt.seqnum)
+                pkt.is_sent = True
+            else:
+                flag = False
+                pkt.is_sent = False
+            i += 1
+        self.send_all_wind = False
+
+
+    def send_not_sent_packets(self):
+        """
+        Sending the packets with is_sent = False ,
+        Taking count of cwd size and flow control
+        """
+        i = 0
+        for pkt in self.send_buffer:
+            dlen = len(pkt.pack())
+            if i < ceil(self.cwd / FRAGMENT_SIZE) and dlen < self.recv_wnd_size and not pkt.is_sent:
+                pkt.recv_wnd = BUFFER_SIZE - self.recv_buffer_size
+                self.socket.sendto(pkt.pack(), self.address)
+                print('Sending not sent packet', pkt.seqnum)
+                pkt.is_sent = True
+                self.recv_wnd_size -= dlen
+            i += 1
+
+
+
+
+    def send_file(self):
+        """
+        Separate thread for sending packets
+        """
+        print('sending length ', self.seq, self.content_length)
+
+        tries = MAX_TRIES
+        while self.seq < self.content_length and self.state != FileDownload3.END and tries > 0:
+            self.lock.acquire()
+            if self.state == FileDownload3.END:
+                break
+            try:
+                while self.state == FileDownload3.PAUSE:
+                    self.lock.acquire()
+                    self.lock.wait()
+                    self.lock.release()
+
+                if self.send_all_wind:
+                    self.send_all_window()
+
+                elif self.send_buffer and not self.send_buffer[0].is_sent:
+                    self.send_not_sent_packets()
+
+                self.load_and_send_packets()
+
+                # Start Timer
+                if not self.send_timer.running():
+                    print('Starting timer')
+                    self.send_timer.start(self.rtt)
+
+                # Wait until a timer goes off or we get an ACK
+                while self.send_timer.running() and not self.send_timer.timeout():
+                    self.lock.release()
+                    if self.state == FileDownload3.DUPLICATE_EVENT:
+                        self.duplicate_event()
+                    print('Sleeping')
+                    time.sleep(SLEEP_INTERVAL)
+                    self.lock.acquire()
+
+                if self.send_timer.timeout():
+                    # Looks like we timed out
+                    self.time_out_event()
+                    tries -= 1
+                else:
+                    tries = MAX_TRIES
+                self.lock.release()
+
+            except Exception as e:
+                print('send ', e)
+
+        if tries > 0:
+            self.fin_request()
+        else:
+            print('Tries 0 , Looks like client is dead')
+            self.shut_down()
+
+
+
+    def load_and_send_packets(self):
         if self.content_length == self.seq:
             return
 
@@ -180,17 +324,14 @@ class FileDownload3:
 
         i = 0
         datalen = 0
-        # print(f'loading packets send buffer size {len(self.send_buffer)}  cwd {self.cwd /FRAGMENT_SIZE}')
 
         if self.send_buffer:
-            # print(self.send_buffer)
             packet_sent_cnt = ceil(self.send_buffer[len(self.send_buffer) - 1].ack_num / FRAGMENT_SIZE)
             ss = self.send_buffer[len(self.send_buffer) - 1].ack_num
         else:
             packet_sent_cnt = ceil(self.seq / FRAGMENT_SIZE)
             ss = self.seq
 
-        # print(f'packet cnt {packet_sent_cnt}')
         while len(self.send_buffer) < ceil(
                 self.cwd / FRAGMENT_SIZE) and self.seq + datalen < self.content_length and not (
                 self.state == FileDownload3.END or self.state == FileDownload3.PAUSE):
@@ -220,95 +361,16 @@ class FileDownload3:
                 break
         file.close()
 
-    def duplicate_event(self):
-        print(
-            f'3 duplicate ACKs  fast transmit : first in buffer {self.send_buffer[0].seqnum}')
-        self.ssthresh /= 2
-        self.cwd = self.ssthresh + 3 * FRAGMENT_SIZE
-        self.socket.sendto(self.send_buffer[0].pack(), self.address)
-        self.send_timer.start(self.rtt)
-
-    def time_out_event(self):
-        print('Timeout')
-        self.send_timer.stop()
-        self.send_all_wind = True
-        self.cwd = FRAGMENT_SIZE
-        self.ssthresh = FRAGMENT_SIZE * 8
-        self.dup_ack_cnt = 0
-
-    def send_file(self):
-        # self.socket.settimeout(2)
-        print('sending length ', self.seq, self.content_length)
-        while self.seq < self.content_length and self.state != FileDownload3.END:
-            if self.recv_wnd_size > FRAGMENT_SIZE + 30 or self.send_all_wind:
-                self.cv.acquire()
-
-                if self.state == FileDownload3.END:
-                    break
-                try:
-                    while self.state == FileDownload3.PAUSE:
-                        self.cv.acquire()
-                        self.cv.wait()
-                        self.cv.release()
-
-                    if self.send_all_wind:
-                        print(
-                            f'send all wnd cwnd {ceil(self.cwd / FRAGMENT_SIZE)}  ssthresh {self.ssthresh / FRAGMENT_SIZE} buffer size {len(self.send_buffer)} revwind {self.recv_wnd_size}')
-                        i = 0
-                        flag = True
-                        for pkt in self.send_buffer:
-                            dlen = len(pkt.pack())
-                            if i < ceil(self.cwd / FRAGMENT_SIZE)  and flag:
-                                pkt.recv_wnd = BUFFER_SIZE - self.recv_buffer_size
-                                self.socket.sendto(pkt.pack(), self.address)
-                                print('Sending all packet', pkt.seqnum)
-                                pkt.is_sent = True
-                                # self.recv_wnd_size -= dlen
-                            else:
-                                flag = False
-                                pkt.is_sent = False
-                            i += 1
-                        self.send_all_wind = False
-
-                    elif self.send_buffer and not self.send_buffer[0].is_sent:
-                        i = 0
-                        for pkt in self.send_buffer:
-                            dlen = len(pkt.pack())
-                            if i < ceil(self.cwd / FRAGMENT_SIZE) and dlen < self.recv_wnd_size and not pkt.is_sent:
-                                pkt.recv_wnd = BUFFER_SIZE - self.recv_buffer_size
-                                self.socket.sendto(pkt.pack(), self.address)
-                                print('Sending not sent packet', pkt.seqnum)
-                                pkt.is_sent = True
-                                self.recv_wnd_size -= dlen
-                            i += 1
-
-                    self.load_packets()
-                    if not self.send_timer.running():
-                        print('Starting timer')
-                        self.send_timer.start(self.rtt)
-
-                    # Wait until a timer goes off or we get an ACK
-                    while self.send_timer.running() and not self.send_timer.timeout():
-                        self.cv.release()
-                        if self.state == DUPLICATE_EVENT:
-                            self.duplicate_event()
-                        print('Sleeping')
-                        time.sleep(SLEEP_INTERVAL)
-                        self.cv.acquire()
-
-                    if self.send_timer.timeout():
-                        # Looks like we timed out
-                        self.time_out_event()
-                    self.cv.release()
-
-                except Exception as e:
-                    print('send ', e)
 
 
-        self.cv.acquire()
+    def fin_request(self):
+        """
+        Gracefully request for closing connection
+        :return: None
+        """
+        self.lock.acquire()
         tries = MAX_TRIES
         while self.state != FileDownload3.END and self.content_length == self.seq and tries > 0:
-
             print('sending FIN')
             p = RudpPacket()
             p.type = RudpPacket.TYPE_FIN
@@ -316,15 +378,19 @@ class FileDownload3:
             p.seqnum = 0
             self.socket.sendto(p.pack(), self.address)
             self.socket.settimeout(5)
-            self.cv.release()
+            self.lock.release()
             time.sleep(0.3)
             tries -= 1
 
         if self.state == FileDownload3.END or tries == 0:
             self.shut_down()
 
+
     def shut_down(self):
-        self.state = SHUT_DOWN
+        """
+        Shutting down this file downloader
+        :return: None
+        """
         self.socket.shutdown(socket.SHUT_RDWR)
         self.state = FileDownload3.END
         self.socket.close()
