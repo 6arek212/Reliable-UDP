@@ -1,8 +1,7 @@
-import random
 import socket
 import threading
 
-from rudp import RudpPacket
+from src.rudp import RudpPacket
 
 IP = "192.168.1.21"
 PORT = 5000
@@ -31,7 +30,7 @@ class FileRepository:
 
     def get_file(self, filename, callback):
         """
-        Downlaod file from the server
+        Downlaod file from the server_files
         :param filename: name of the file to download
         :param callback: callback for the GUI
         :return:
@@ -151,7 +150,7 @@ class FileRepository:
         handling the received packet
         ACK -> if: the seqnum > self.seq  else: DUPACK
         :param packet: received packet
-        :param address: server udp socket address
+        :param address: server_files udp socket address
         :return: None
         """
         p = RudpPacket()

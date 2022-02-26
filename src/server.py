@@ -6,12 +6,12 @@ from os.path import isfile, join
 import os
 
 
-from file_download import FileDownload
+from server_files.file_download import FileDownload
 
 PORT = 5000
 IP = "192.168.1.21"
 dirname = os.path.dirname(__file__)
-filename = os.path.join(dirname, 'data')
+filename = os.path.join(dirname, 'server_files/data')
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.bind((IP, PORT))

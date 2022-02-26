@@ -12,7 +12,7 @@ controller = Controller(callback=callback)
 
 flag = True
 
-m = '1- Connect to server\n2- Send msg \n3- Exist\n'
+m = '1- Connect to server_files\n2- Send msg \n3- Exist\n'
 
 
 while flag:

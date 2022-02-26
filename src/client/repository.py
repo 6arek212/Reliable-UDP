@@ -1,7 +1,7 @@
 import socket
 import threading
 
-from file_transfer_repo import FileRepository
+from client.file_transfer_repo import FileRepository
 
 IP = "192.168.1.21"
 PORT = 5000
@@ -41,13 +41,13 @@ class Repository:
 
     def send_msg_to_all(self, msg):
         if not self.is_connected:
-            raise Exception('you need to connect to the server first !')
+            raise Exception('you need to connect to the server_files first !')
 
         self.sock.send(f'{{"message": "{msg}","type":"message-all"}}'.encode())
 
     def send_msg_to(self, to, msg):
         if not self.is_connected:
-            raise Exception('you need to connect to the server first !')
+            raise Exception('you need to connect to the server_files first !')
 
         self.sock.send(
             f'{{"message": "{msg}","to":"{to}","type":"message-to"}}'.encode())
@@ -55,21 +55,21 @@ class Repository:
 
     def get_users(self):
         if not self.is_connected:
-            raise Exception('you need to connect to the server first !')
+            raise Exception('you need to connect to the server_files first !')
 
         self.sock.send(
             f'{{"type":"get_users"}}'.encode())
 
     def get_files_list(self):
         if not self.is_connected:
-            raise Exception('you need to connect to the server first !')
+            raise Exception('you need to connect to the server_files first !')
 
         self.sock.send(
             f'{{"type":"get_files_list"}}'.encode())
 
     def get_file(self, filename, callback):
         if not self.is_connected or not filename:
-            raise Exception('you need to connect to the server first ! or check filename')
+            raise Exception('you need to connect to the server_files first ! or check filename')
         if self.fr is not None and self.fr.state != FileRepository.DONE:
             return
         self.fr = FileRepository(self.sock)
@@ -77,7 +77,7 @@ class Repository:
 
     def pause_download(self):
         if not self.is_connected or self.fr is None:
-            raise Exception('you need to connect to the server first !')
+            raise Exception('you need to connect to the server_files first !')
         self.fr.pause()
         print('pausing !', self.fr.is_paused)
         val = 'true' if self.fr.is_paused else 'false'
@@ -86,7 +86,7 @@ class Repository:
 
     def disconnect(self):
         if not self.is_connected:
-            raise Exception('you need to connect to the server first !')
+            raise Exception('you need to connect to the server_files first !')
 
         self.sock.send(f'{{"name": "{self.name}","type":"disconnect"}}'.encode())
         self.is_connected = False

@@ -4,9 +4,11 @@ import threading
 import time
 from math import ceil
 
-from rudp import RudpPacket
-from timer import Timer
+from src.rudp import RudpPacket
+from server_files.timer import Timer
+import os
 
+dirname = os.path.dirname(__file__)
 BUFFER_SIZE = 10000
 FRAGMENT_SIZE = 500
 SLEEP_INTERVAL = 0.05
@@ -53,7 +55,7 @@ class FileDownload:
         :return: None
         """
         try:
-            self.content_length = os.stat(f'data/{self.file_name}').st_size
+            self.content_length = os.stat(os.path.join(dirname, f'data/{self.file_name}')).st_size
         except Exception as e:
             print(e)
             return
@@ -308,7 +310,7 @@ class FileDownload:
             return
 
         try:
-            file = open(f'data/{self.file_name}', 'rb')
+            file = open(os.path.join(dirname,f'data/{self.file_name}'), 'rb')
         except IOError:
             print('Unable to open  file')
             self.shut_down()
