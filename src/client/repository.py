@@ -70,9 +70,9 @@ class Repository:
     def get_file(self, filename, callback):
         if not self.is_connected or not filename:
             raise Exception('you need to connect to the server first ! or check filename')
-        if self.fr is not None and self.fr.state != FileRepository3.DONE:
+        if self.fr is not None and self.fr.state != FileRepository.DONE:
             return
-        self.fr = FileRepository3(self.sock)
+        self.fr = FileRepository(self.sock)
         self.fr.get_file(filename, callback)
 
     def pause_download(self):

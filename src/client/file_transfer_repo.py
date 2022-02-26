@@ -70,7 +70,7 @@ class FileRepository:
         A separate Thread for listening for the udp socket and appending the incoming data to the rev_buffer
         :return: None
         """
-        while self.state != FileRepository3.DONE:
+        while self.state != FileRepository.DONE:
             try:
                 data, address = self.udp_sock.recvfrom(BUFFER_SIZE)
                 self.lock.acquire()
@@ -102,7 +102,7 @@ class FileRepository:
         """
         A Thread for handling the packets in the rev_buffer
         """
-        while self.state != FileRepository3.DONE:
+        while self.state != FileRepository.DONE:
             try:
                 while self.is_paused:
                     self.lock.acquire()
@@ -190,8 +190,8 @@ class FileRepository:
         shut down this file downloader
         :return: None
         """
-        if self.state != FileRepository3.DONE:
+        if self.state != FileRepository.DONE:
             print('Shutting Down')
-            self.state = FileRepository3.DONE
+            self.state = FileRepository.DONE
             self.udp_sock.close()
             self.callback('Done')

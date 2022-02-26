@@ -1,6 +1,4 @@
-import _thread
 import os
-import select
 import socket
 import threading
 import time
@@ -96,7 +94,9 @@ class FileDownload:
                 packet = RudpPacket().unpack(data)
 
                 if not ((
-                                packet.type == RudpPacket.TYPE_ACK and self.state == FileDownload.DUPLICATE_EVENT and packet.ack_num == self.seq) or packet.seqnum > packet.ack_num):
+                                packet.type == RudpPacket.TYPE_ACK and (self.state == FileDownload.DUPLICATE_EVENT
+                                                                        or self.state == FileDownload.FAST_TRANSMIT)
+                                and packet.ack_num == self.seq) or packet.seqnum > packet.ack_num):
                     self.lock.acquire()
 
                     if packet.type == RudpPacket.TYPE_ACK:
@@ -161,6 +161,7 @@ class FileDownload:
                 print(f'new RTT {self.rtt}')
 
             self.send_timer.stop()
+            self.dup_ack_cnt = 0
             if self.state == FileDownload.FAST_TRANSMIT:
                 self.cwd = self.ssthresh
                 self.state = None
@@ -177,29 +178,26 @@ class FileDownload:
             else:
                 self.cwd += FRAGMENT_SIZE
 
-            self.dup_ack_cnt = 0
             print(f'packet seq {packet.seqnum}  ack {packet.ack_num} was ACKED  revwnd {packet.recv_wnd}')
             print(f'cwnd {ceil(self.cwd / FRAGMENT_SIZE)}  ssthresh {ceil(self.ssthresh / FRAGMENT_SIZE)}')
 
         elif packet.ack_num == self.seq and self.send_buffer:
             print(f'may be a packet was lost or took longer time seq {self.seq}  packet ack {packet.ack_num}')
             self.dup_ack_cnt += 1
-            if self.dup_ack_cnt == 3 and not self.send_all_wind:
+            if self.dup_ack_cnt == 3 and self.state != FileDownload.FAST_TRANSMIT:
                 if self.send_buffer and packet.ack_num == self.send_buffer[0].seqnum:
                     self.state = FileDownload.DUPLICATE_EVENT
+                    self.ssthresh /= 2
+                    self.cwd = self.ssthresh + 3 * FRAGMENT_SIZE
                 self.dup_ack_cnt = 0
 
-
-
-
-    def duplicate_event(self):
+    def fast_transmit_event(self):
         """
         Duplicated packets event handling
         """
         print(
             f'3 duplicate ACKs  fast transmit : first in buffer {self.send_buffer[0].seqnum}')
-        self.ssthresh /= 2
-        self.cwd = self.ssthresh + 3 * FRAGMENT_SIZE
+
         self.socket.sendto(self.send_buffer[0].pack(), self.address)
         self.send_timer.start(self.rtt)
         self.state = FileDownload.FAST_TRANSMIT
@@ -214,7 +212,6 @@ class FileDownload:
         self.cwd = FRAGMENT_SIZE
         self.ssthresh = FRAGMENT_SIZE * 8
         self.dup_ack_cnt = 0
-
 
     def send_all_window(self):
         """
@@ -236,7 +233,6 @@ class FileDownload:
             i += 1
         self.send_all_wind = False
 
-
     def send_not_sent_packets(self):
         """
         Sending the packets with is_sent = False ,
@@ -252,9 +248,6 @@ class FileDownload:
                 pkt.is_sent = True
                 self.recv_wnd_size -= dlen
             i += 1
-
-
-
 
     def send_file(self):
         """
@@ -290,7 +283,7 @@ class FileDownload:
                 while self.send_timer.running() and not self.send_timer.timeout():
                     self.lock.release()
                     if self.state == FileDownload.DUPLICATE_EVENT:
-                        self.duplicate_event()
+                        self.fast_transmit_event()
                     print('Sleeping')
                     time.sleep(SLEEP_INTERVAL)
                     self.lock.acquire()
@@ -311,8 +304,6 @@ class FileDownload:
         else:
             print('Tries 0 , Looks like client is dead')
             self.shut_down()
-
-
 
     def load_and_send_packets(self):
         if self.content_length == self.seq:
@@ -364,8 +355,6 @@ class FileDownload:
                 break
         file.close()
 
-
-
     def fin_request(self):
         """
         Gracefully request for closing connection
@@ -387,7 +376,6 @@ class FileDownload:
 
         if self.state == FileDownload.END or tries == 0:
             self.shut_down()
-
 
     def shut_down(self):
         """
