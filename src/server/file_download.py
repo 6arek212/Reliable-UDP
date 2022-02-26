@@ -70,7 +70,7 @@ class FileDownload:
         """
         print(f'Pausing ! , seq {self.seq}')
         if val:
-            self.state = FileDownload3.PAUSE
+            self.state = FileDownload.PAUSE
             self.send_timer.stop()
             self.send_all_wind = False
 
@@ -90,13 +90,13 @@ class FileDownload:
         Separate thread for listening for client
         :return: None
         """
-        while self.state != FileDownload3.END:
+        while self.state != FileDownload.END:
             try:
                 data = self.socket.recv(BUFFER_SIZE)
                 packet = RudpPacket().unpack(data)
 
                 if not ((
-                                packet.type == RudpPacket.TYPE_ACK and self.state == FileDownload3.DUPLICATE_EVENT and packet.ack_num == self.seq) or packet.seqnum > packet.ack_num):
+                                packet.type == RudpPacket.TYPE_ACK and self.state == FileDownload.DUPLICATE_EVENT and packet.ack_num == self.seq) or packet.seqnum > packet.ack_num):
                     self.lock.acquire()
 
                     if packet.type == RudpPacket.TYPE_ACK:
@@ -104,7 +104,7 @@ class FileDownload:
 
                     if packet.type == RudpPacket.TYPE_FINACK:
                         print('FINACK')
-                        self.state = FileDownload3.END
+                        self.state = FileDownload.END
                     self.lock.release()
 
                 else:
@@ -117,13 +117,13 @@ class FileDownload:
 
             except socket.timeout as e:
                 print('listen_to_client', e)
-                if self.state != FileDownload3.PAUSE:
+                if self.state != FileDownload.PAUSE:
                     self.lock.acquire()
-                    self.state = FileDownload3.END
+                    self.state = FileDownload.END
                     self.shut_down()
                     self.lock.release()
 
-                while self.state == FileDownload3.PAUSE:
+                while self.state == FileDownload.PAUSE:
                     self.lock.acquire()
                     self.lock.wait()
                     self.lock.release()
@@ -150,7 +150,7 @@ class FileDownload:
         :param packet: ACK packet
         :return: None
         """
-        if self.state == FileDownload3.END or self.state == FileDownload3.PAUSE:
+        if self.state == FileDownload.END or self.state == FileDownload.PAUSE:
             return
 
         self.recv_wnd_size = packet.recv_wnd
@@ -161,7 +161,7 @@ class FileDownload:
                 print(f'new RTT {self.rtt}')
 
             self.send_timer.stop()
-            if self.state == FileDownload3.FAST_TRANSMIT:
+            if self.state == FileDownload.FAST_TRANSMIT:
                 self.cwd = self.ssthresh
                 self.state = None
                 print('FAST RECOVERY ENDS')
@@ -186,7 +186,7 @@ class FileDownload:
             self.dup_ack_cnt += 1
             if self.dup_ack_cnt == 3 and not self.send_all_wind:
                 if self.send_buffer and packet.ack_num == self.send_buffer[0].seqnum:
-                    self.state = FileDownload3.DUPLICATE_EVENT
+                    self.state = FileDownload.DUPLICATE_EVENT
                 self.dup_ack_cnt = 0
 
 
@@ -202,7 +202,7 @@ class FileDownload:
         self.cwd = self.ssthresh + 3 * FRAGMENT_SIZE
         self.socket.sendto(self.send_buffer[0].pack(), self.address)
         self.send_timer.start(self.rtt)
-        self.state = FileDownload3.FAST_TRANSMIT
+        self.state = FileDownload.FAST_TRANSMIT
 
     def time_out_event(self):
         """
@@ -263,12 +263,12 @@ class FileDownload:
         print('sending length ', self.seq, self.content_length)
 
         tries = MAX_TRIES
-        while self.seq < self.content_length and self.state != FileDownload3.END and tries > 0:
+        while self.seq < self.content_length and self.state != FileDownload.END and tries > 0:
             self.lock.acquire()
-            if self.state == FileDownload3.END:
+            if self.state == FileDownload.END:
                 break
             try:
-                while self.state == FileDownload3.PAUSE:
+                while self.state == FileDownload.PAUSE:
                     self.lock.acquire()
                     self.lock.wait()
                     self.lock.release()
@@ -289,7 +289,7 @@ class FileDownload:
                 # Wait until a timer goes off or we get an ACK
                 while self.send_timer.running() and not self.send_timer.timeout():
                     self.lock.release()
-                    if self.state == FileDownload3.DUPLICATE_EVENT:
+                    if self.state == FileDownload.DUPLICATE_EVENT:
                         self.duplicate_event()
                     print('Sleeping')
                     time.sleep(SLEEP_INTERVAL)
@@ -337,7 +337,7 @@ class FileDownload:
 
         while len(self.send_buffer) < ceil(
                 self.cwd / FRAGMENT_SIZE) and self.seq + datalen < self.content_length and not (
-                self.state == FileDownload3.END or self.state == FileDownload3.PAUSE):
+                self.state == FileDownload.END or self.state == FileDownload.PAUSE):
             file.seek(FRAGMENT_SIZE * (packet_sent_cnt + i))
             data = file.read(FRAGMENT_SIZE)
 
@@ -373,7 +373,7 @@ class FileDownload:
         """
         self.lock.acquire()
         tries = MAX_TRIES
-        while self.state != FileDownload3.END and self.content_length == self.seq and tries > 0:
+        while self.state != FileDownload.END and self.content_length == self.seq and tries > 0:
             print('sending FIN')
             p = RudpPacket()
             p.type = RudpPacket.TYPE_FIN
@@ -385,7 +385,7 @@ class FileDownload:
             time.sleep(0.3)
             tries -= 1
 
-        if self.state == FileDownload3.END or tries == 0:
+        if self.state == FileDownload.END or tries == 0:
             self.shut_down()
 
 
@@ -395,6 +395,6 @@ class FileDownload:
         :return: None
         """
         self.socket.shutdown(socket.SHUT_RDWR)
-        self.state = FileDownload3.END
+        self.state = FileDownload.END
         self.socket.close()
         self.finish_callback()
