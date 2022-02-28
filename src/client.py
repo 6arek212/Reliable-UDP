@@ -1,57 +1,70 @@
+import threading
 from tkinter import *
 from tkinter import ttk
-import client_files.events as events
+from client_files.events import ChatEvents
 from client_files.controller import Controller
+from client_files.ui_events import UIEvents
 
+lock = threading.Lock()
+
+users = {}
 
 def callback(data):
-    print(data)
-    Label(second_frame, text=data).grid(row=controller.col)
-    controller.col = controller.col + 1
+    lock.acquire()
+    if isinstance(data, UIEvents.Message):
+        Label(second_frame, text=data.msg).grid(row=controller.col)
+        controller.col = controller.col + 1
 
+    if isinstance(data, UIEvents.UpdateDownloadPercentage):
+        if data.download_percentage < 100:
+            download_btn.config(text='Pause')
+            file_dow_per.config(text='%.2f' % data.download_percentage)
+        else:
+            download_btn.config(text='Download')
+            file_dow_per.config(text='Done')
+
+    if isinstance(data, UIEvents.Connect):
+        print(f'is connected {data.is_connected}')
+
+    if isinstance(data, UIEvents.OnlineUsers):
+        print(f'users {data.users}')
+
+    if isinstance(data, UIEvents.UserDisconnected):
+        print(f'disconnected {data.user}')
+        users.pop(data.user)
+    if isinstance(data, UIEvents.NewUser):
+        print(f'connected {data.user}')
+        users[data.user] = data.user
+    lock.release()
 
 def login():
     if not bool(controller.is_connected):
-        controller.trigger_event(events.Connect(address_e.get(), name_e.get()))
+        controller.trigger_event(ChatEvents.Connect(address_e.get(), name_e.get()))
         login_btn.configure(text='Logout')
     else:
-        print('disss')
-        controller.trigger_event(events.Disconnect())
+        controller.trigger_event(ChatEvents.Disconnect())
         login_btn.configure(text='Login')
 
 
 def get_users():
-    controller.trigger_event(events.GetUsers())
+    controller.trigger_event(ChatEvents.GetUsers())
 
 
 def get_files():
-    controller.trigger_event(events.GetFiles())
+    controller.trigger_event(ChatEvents.GetFiles())
 
 
 def send_message():
-    controller.trigger_event(events.Message(
+    controller.trigger_event(ChatEvents.Message(
         msg=msg_e.get(), to=to_e.get().strip()))
-
-
-def handle_download_btn(per):
-    if isinstance(per, str):
-        file_dow_per.config(text=per)
-        download_btn.config(text='Download')
-        return
-
-    file_dow_per.config(text='%.2f' % per)
-    if 0 < per < 100:
-        download_btn.config(text='Pause')
-    else:
-        download_btn.config(text='Download')
 
 
 def download_file():
     print(download_btn['text'])
     if download_btn['text'] == 'Download':
-        controller.trigger_event(events.DownloadFile(file_name_en.get(), lambda per: handle_download_btn(per)))
+        controller.trigger_event(ChatEvents.DownloadFile(file_name_en.get()))
     else:
-        controller.trigger_event(events.PauseDownload())
+        controller.trigger_event(ChatEvents.PauseDownload())
 
 
 controller = Controller(callback=callback)

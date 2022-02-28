@@ -198,6 +198,7 @@ class FileDownload:
             f'3 duplicate ACKs  fast transmit : first in buffer {self.send_buffer[0].seqnum}')
 
         self.socket.sendto(self.send_buffer[0].pack(), self.address)
+        self.send_timer.stop()
         self.send_timer.start(self.rtt)
         self.state = FileDownload.FAST_TRANSMIT
 

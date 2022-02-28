@@ -1,12 +1,12 @@
+import random
 import socket
 import threading
 
-from src.rudp import RudpPacket
+from client_files.ui_events import UIEvents
+from rudp import RudpPacket
 
-IP = "192.168.1.21"
-PORT = 5000
+IP = socket.gethostbyname(socket.gethostname())
 BUFFER_SIZE = 10000
-lock = threading.Lock()
 MAX_TIME_OUT = 10
 FRAGMENT_SIZE = 500
 
@@ -14,11 +14,10 @@ FRAGMENT_SIZE = 500
 class FileRepository:
     DONE = 1
 
-    def __init__(self, sock):
+    def __init__(self, sock, ui_message_callback):
         self.sock = sock
-        self.is_working = False
+        self.ui_message_callback = ui_message_callback
         self.udp_sock = None
-        self.callback = None
         self.file_name = None
         self.state = None
         self.is_paused = False
@@ -28,20 +27,19 @@ class FileRepository:
         self.seq = 0
         self.lock = threading.Condition()
 
-    def get_file(self, filename, callback):
+    def get_file(self, filename):
         """
         Downlaod file from the server_files
         :param filename: name of the file to download
         :param callback: callback for the GUI
         :return:
         """
-        self.file_name = filename
-        lock.acquire()
-        self.callback = callback
-        if self.is_working:
+        self.lock.acquire()
+
+        if self.state is not None and self.state != FileRepository.DONE:
             return
-        self.is_working = True
-        lock.release()
+        self.file_name = filename
+        self.lock.release()
         self.udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_sock.bind((IP, 0))
         self.udp_sock.settimeout(MAX_TIME_OUT)
@@ -56,7 +54,10 @@ class FileRepository:
         :return: None
         """
         self.is_paused = not self.is_paused
+        if self.is_paused:
+            self.ui_message_callback(UIEvents.Message(f'Download paused , Downloaded {"%.2f" % (self.seq / 1000)} KB'))
         if not self.is_paused:
+            self.ui_message_callback(UIEvents.Message(f'Download proceeded , Downloaded {"%.2f" % (self.seq / 1000)} KB'))
             self.lock.acquire()
             self.state = None
             self.lock.notify_all()
@@ -71,17 +72,17 @@ class FileRepository:
             try:
                 data, address = self.udp_sock.recvfrom(BUFFER_SIZE)
                 self.lock.acquire()
-                # ra = random.uniform(0, 1)
-                #
-                # if ra < 0.95:
-                if self.recv_buffer_size + len(data) < BUFFER_SIZE:
-                    self.recv_buffer_size += len(data)
-                    self.rev_buffer.append((data, address))
+                ra = random.uniform(0, 1)
+
+                if ra < 0.95:
+                    if self.recv_buffer_size + len(data) < BUFFER_SIZE:
+                        self.recv_buffer_size += len(data)
+                        self.rev_buffer.append((data, address))
+                    else:
+                        packet = RudpPacket().unpack(data)
+                        print('packet was thrown because buffer is full ', packet)
                 else:
-                    packet = RudpPacket().unpack(data)
-                    print('packet was thrown because buffer is full ', packet)
-                # else:
-                #     print('throw')
+                    print('throw')
                 self.lock.release()
             except socket.timeout as e:
                 print(e, self.is_paused)
@@ -94,7 +95,7 @@ class FileRepository:
                     self.lock.release()
 
             except Exception as e:
-                print('listening stopped', e)
+                print('listening stopped')
 
     def buffer_handler(self):
         """
@@ -167,7 +168,7 @@ class FileRepository:
             self.recv_wnd[packet.seqnum] = packet
             self.write_to_file()
             percentage = self.seq / packet.content_len * 100
-            self.callback(percentage)
+            self.ui_message_callback(UIEvents.UpdateDownloadPercentage(percentage))
             print(self.seq, packet.seqnum, f'ACKED send recv window {packet.recv_wnd}')
             p.ack_num = self.seq
             self.udp_sock.sendto(p.pack(), address)
@@ -190,4 +191,4 @@ class FileRepository:
             print('Shutting Down')
             self.state = FileRepository.DONE
             self.udp_sock.close()
-            self.callback('Done')
+            self.ui_message_callback(UIEvents.Message(f'Download finished, Downloaded {"%.2f" % (self.seq / 1000)} KB'))

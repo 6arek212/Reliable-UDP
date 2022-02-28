@@ -1,9 +1,11 @@
+import json
 import socket
 import threading
 
 from client_files.file_transfer_repo import FileRepository
+from client_files.ui_events import UIEvents
 
-IP = "192.168.1.21"
+SERVER_DEFAULT_IP = "10.113.4.200"
 PORT = 5000
 
 
@@ -19,12 +21,46 @@ class Repository:
     def connect_to_server(self, ip, name):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.name = name
-        mip = IP if ip is None else ip
-        print('ip is ', mip)
-        self.sock.connect((IP, PORT))
-        self.sock.send(f'{{"name": "{name}","type":"connect"}}'.encode())
-        self.is_connected = True
-        threading.Thread(target=self.listen).start()
+        mip = SERVER_DEFAULT_IP if (ip is None or not ip) else ip
+        print('server ip is ', mip, name)
+        try:
+            self.sock.connect((mip, PORT))
+            self.sock.send(f'{{"name": "{name}","type":"connect"}}'.encode())
+            self.callback(UIEvents.Connect(True))
+            self.is_connected = True
+            threading.Thread(target=self.listen).start()
+        except Exception as e:
+            self.is_connected = False
+            print('connect_to_server', e)
+
+    def handle_incoming_data(self, data):
+        try:
+            print('in data ',data)
+            json_data = json.loads(data)
+            if 'type' not in json_data:
+                raise Exception('something wrong with incoming json')
+
+            ui_data = None
+            if json_data['type'] == 'get_files':
+                ui_data = UIEvents.Message(json_data['data'])
+
+            if json_data['type'] == 'get_users':
+                ui_data = UIEvents.OnlineUsers(json_data['data'])
+
+            if json_data['type'] == 'sent_to_all' or json_data['type'] == 'private_message':
+                ui_data = UIEvents.Message(json_data['data'])
+
+            if json_data['type'] == 'user_disconnected':
+                self.callback(UIEvents.Message(f'{json_data["data"]}, left the chat'))
+                ui_data = UIEvents.UserDisconnected(json_data['data'])
+
+            if json_data['type'] == 'new_user':
+                self.callback(UIEvents.Message(f'{json_data["data"]}, has joined the chat say hi'))
+                ui_data = UIEvents.NewUser(json_data['data'])
+
+            self.callback(ui_data)
+        except Exception as e:
+            print('handle_incoming_data', e)
 
     def listen(self):
         while self.is_connected:
@@ -33,16 +69,16 @@ class Repository:
                 if not data:
                     break
                 else:
-                    self.callback(data)
+                    self.handle_incoming_data(data)
             except Exception as e:
                 print(e)
+                self.is_connected = False
         self.sock.close()
-        self.callback(f'{self.name} disconnected')
+        self.callback(UIEvents.Message(f'{self.name} disconnected'))
 
     def send_msg_to_all(self, msg):
         if not self.is_connected:
             raise Exception('you need to connect to the server_files first !')
-
         self.sock.send(f'{{"message": "{msg}","type":"message-all"}}'.encode())
 
     def send_msg_to(self, to, msg):
@@ -51,7 +87,7 @@ class Repository:
 
         self.sock.send(
             f'{{"message": "{msg}","to":"{to}","type":"message-to"}}'.encode())
-        self.callback(msg)
+        self.callback(UIEvents.Message(f'(Me) {msg}'))
 
     def get_users(self):
         if not self.is_connected:
@@ -67,13 +103,13 @@ class Repository:
         self.sock.send(
             f'{{"type":"get_files_list"}}'.encode())
 
-    def get_file(self, filename, callback):
+    def get_file(self, filename):
         if not self.is_connected or not filename:
             raise Exception('you need to connect to the server_files first ! or check filename')
         if self.fr is not None and self.fr.state != FileRepository.DONE:
             return
-        self.fr = FileRepository(self.sock)
-        self.fr.get_file(filename, callback)
+        self.fr = FileRepository(self.sock, self.callback)
+        self.fr.get_file(filename)
 
     def pause_download(self):
         if not self.is_connected or self.fr is None:
@@ -87,6 +123,6 @@ class Repository:
     def disconnect(self):
         if not self.is_connected:
             raise Exception('you need to connect to the server_files first !')
-
         self.sock.send(f'{{"name": "{self.name}","type":"disconnect"}}'.encode())
         self.is_connected = False
+        self.callback(UIEvents.Connect(False))

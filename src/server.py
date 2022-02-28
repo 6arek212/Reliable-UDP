@@ -5,11 +5,10 @@ from os import listdir
 from os.path import isfile, join
 import os
 
-
 from server_files.file_download import FileDownload
 
 PORT = 5000
-IP = "192.168.1.21"
+IP = socket.gethostbyname(socket.gethostname())
 dirname = os.path.dirname(__file__)
 filename = os.path.join(dirname, 'server_files/data')
 
@@ -21,37 +20,44 @@ clients_names = {}
 clients_download = {}
 
 
+def json_response(type, data):
+    if isinstance(data, list):
+        return f'{{"type":"{type}" , "data": {json.dumps(data)}}}'
+    return f'{{"type":"{type}" , "data": "{data}"}}'
+
+
 def get_files(client_socket):
     onlyfiles = [f for f in listdir(filename) if isfile(join(filename, f))]
-    names = 'Available files: '
+    names = []
     for name in onlyfiles:
-        names += name + ', '
-    names = names[:len(names) - 2]
-    names.capitalize()
-    client_socket.send(f'{names}'.encode())
+        names.append(name)
+    client_socket.send(json_response('get_files', names).encode())
 
 
-def get_users(client_socket):
-    names = 'Online users: '
-    for name in clients_names.keys():
-        names += name + ', '
-    names = names[:len(names) - 2]
-    names.capitalize()
-    client_socket.send(f'{names}'.encode())
+def get_users(client_socket=None):
+    users = []
+    for user in clients_names.keys():
+        users.append(user.capitalize())
+    if client_socket is not None:
+        client_socket.send(json_response('get_users', users).encode())
+    return users
 
 
-def send_to_all(client_socket, msg):
+def send_to_all(client_socket, msg, type=None):
     for sck in clients_names.values():
         try:
             # if sck is not client_socket:
-            sck.send(f'{msg}'.encode())
+            if type is None:
+                sck.send(json_response('sent_to_all', f'(Public) {msg}').encode())
+            else:
+                sck.send(json_response(type, msg).encode())
         except Exception as e:
             print(e)
 
 
 def send_to(to, msg):
     try:
-        clients_names[to].send(f'{msg}'.encode())
+        clients_names[to].send(json_response('private_message', msg).encode())
     except Exception as e:
         print(e)
 
@@ -70,13 +76,14 @@ def handle_data(client_socket, data):
         dj = json.loads(data)
         if dj['type'] == 'disconnect':
             clients_names.pop(dj['name'])
-            send_to_all(client_socket, f' {dj["name"]} disconnected')
+            send_to_all(client_socket, f'{dj["name"]}', 'user_disconnected')
             client_socket.close()
             return False
 
         if dj['type'] == 'connect':
             clients_names[dj['name']] = client_socket
-            send_to_all(client_socket, f' {dj["name"]} connected')
+            client_socket.send(json_response('get_users', get_users()).encode())
+            send_to_all(client_socket, f'{dj["name"]}', 'new_user')
 
         if dj['type'] == 'message-all':
             send_to_all(client_socket, dj['message'])
@@ -92,7 +99,7 @@ def handle_data(client_socket, data):
 
         if dj['type'] == 'pause_download':
             if clients_download.get(client_socket) is None:
-                client_socket.send('you must request to download first !'.encode())
+                client_socket.send(json_response('message', 'you must request to download first !').encode())
             else:
                 if dj['val']:
                     clients_download.get(client_socket).set_is_paused(True)
@@ -101,7 +108,7 @@ def handle_data(client_socket, data):
 
         if dj['type'] == 'get_file':
             if dj['filename'] is None or not dj['filename']:
-                client_socket.send('you must attach a file name to the message !'.encode())
+                client_socket.send(json_response('message', 'you must attach a file name to the message !').encode())
             else:
                 print(clients_download.get(client_socket) is None)
                 if clients_download.get(client_socket) is None:
@@ -139,7 +146,7 @@ def listen_to_client(client_socket):
         client_socket.close()
 
 
-print('server is up')
+print(f'Server is up on ip {IP} , port {PORT}')
 while 1:
     client_sock, address = sock.accept()
     threading.Thread(target=listen_to_client, args=(client_sock,)).start()
