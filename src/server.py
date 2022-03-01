@@ -17,6 +17,7 @@ sock.bind((IP, PORT))
 sock.listen(10)
 
 clients_names = {}
+clients_address = {}
 clients_download = {}
 
 
@@ -43,21 +44,22 @@ def get_users(client_socket=None):
     return users
 
 
-def send_to_all(client_socket, msg, type=None):
+def send_to_all(client_socket, msg, address, type=None):
     for sck in clients_names.values():
         try:
             # if sck is not client_socket:
             if type is None:
-                sck.send(json_response('sent_to_all', f'(Public) {msg}').encode())
+                sck.send(json_response('public_message', f'(Public from {clients_address.get(address)}) {msg}').encode())
             else:
                 sck.send(json_response(type, msg).encode())
         except Exception as e:
             print(e)
 
 
-def send_to(to, msg):
+def send_to(to, msg, address):
     try:
-        clients_names[to].send(json_response('private_message', f'(Private) {msg}').encode())
+        clients_names[to].send(
+            json_response('private_message', f'(Private from {clients_address.get(address)}) {msg}').encode())
     except Exception as e:
         print(e)
 
@@ -75,22 +77,24 @@ def handle_data(client_socket, data, address):
     try:
         dj = json.loads(data)
         if dj['type'] == 'disconnect':
+            clients_address.pop(address)
             clients_names.pop(dj['name'])
-            send_to_all(client_socket, f'{dj["name"]}', 'user_disconnected')
+            send_to_all(client_socket, f'{dj["name"]}', address, 'user_disconnected')
             client_socket.close()
             return False
 
         if dj['type'] == 'connect':
+            clients_address[address] = dj['name']
             clients_names[dj['name']] = client_socket
-            send_to_all(client_socket, f'{dj["name"]}', 'new_user')
+            send_to_all(client_socket, f'{dj["name"]}', address, 'new_user')
             sleep(.005)
             client_socket.send(json_response('get_users', get_users()).encode())
 
         if dj['type'] == 'message-all':
-            send_to_all(client_socket, dj['message'])
+            send_to_all(client_socket, dj['message'], address)
 
         if dj['type'] == 'message-to':
-            send_to(dj['to'], dj['message'])
+            send_to(dj['to'], dj['message'], address)
 
         if dj['type'] == 'get_users':
             get_users(client_socket)
@@ -141,10 +145,12 @@ def listen_to_client(client_socket, address):
 
     except Exception as e:
         print('listen_to_client', e)
-        for (key, value) in clients_names.items():
-            if value is client_sock:
-                clients_names.pop(key)
-                break
+        clients_names.pop(clients_address.get(address))
+        clients_address.pop(address)
+        # for (key, value) in clients_names.items():
+        #     if value is client_sock:
+        #         clients_names.pop(key)
+        #         break
         client_socket.close()
 
 

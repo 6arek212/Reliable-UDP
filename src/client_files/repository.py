@@ -20,12 +20,11 @@ class Repository:
         self.callback = callback
         self.lock = threading.Lock()
 
-
-    def connect_to_server(self, ip ,port, name):
+    def connect_to_server(self, ip, port, name):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.name = name
         mip = SERVER_DEFAULT_IP if (ip is None or not ip) else ip
-        print('server ip is ', mip, name)
+        print(f'server ip is {mip} port {port} name {name}')
         try:
             self.sock.connect((mip, port))
             self.sock.send(f'{{"name": "{name}","type":"connect"}}'.encode())
@@ -51,8 +50,11 @@ class Repository:
             if json_data['type'] == 'get_users':
                 ui_data = UIEvents.OnlineUsers(json_data['data'])
 
-            if json_data['type'] == 'sent_to_all' or json_data['type'] == 'private_message':
-                ui_data = UIEvents.Message(json_data['data'])
+            if json_data['type'] == 'public_message':
+                ui_data = UIEvents.PublicMessage(json_data['data'])
+
+            if json_data['type'] == 'private_message':
+                ui_data = UIEvents.PrivateMessage(json_data['data'])
 
             if json_data['type'] == 'user_disconnected':
                 self.callback(UIEvents.Message(f'{json_data["data"]}, left the chat'))

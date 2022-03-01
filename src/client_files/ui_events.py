@@ -7,6 +7,14 @@ class UIEvents:
         def __init__(self, download_percentage):
             self.download_percentage = download_percentage
 
+    class PublicMessage:
+        def __init__(self, msg):
+            self.msg = msg
+
+    class PrivateMessage:
+        def __init__(self, msg):
+            self.msg = msg
+
     class Message:
         def __init__(self, msg):
             self.msg = msg
@@ -26,12 +34,6 @@ class UIEvents:
     class FilesList:
         def __init__(self, files_list):
             self.files_list = files_list
-
-    class PrivateMessage:
-        pass
-
-    class PublicMessage:
-        pass
 
     class Pause:
         def __init__(self, val):

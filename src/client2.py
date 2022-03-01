@@ -55,27 +55,30 @@ class GUI(QWidget):
             self.sendFileButtom.clicked.connect(self.download_file)
 
     def set_pause_state(self, paused):
-        print('aaaaaaa ',paused)
+        print('aaaaaaa ', paused)
         if paused:
             self.sendFileButtom.setText("Start Download")
         else:
             self.sendFileButtom.setText("Pause Download")
 
-
     def callback(self, data):
         lock.acquire()
+
+        if isinstance(data, UIEvents.PublicMessage):
+            print(data.msg)
+            self.display_message(f'{data.msg}', "#006600")
+
+        if isinstance(data, UIEvents.PrivateMessage):
+            self.display_message(f'{data.msg}', "#FF0000")
 
         if isinstance(data, UIEvents.Pause):
             self.changes.pause.emit(data.is_paused)
 
         if isinstance(data, UIEvents.Message):
-            if "(Public)" in data.msg:
-                self.display_message(f'{data.msg}', "#006600")
-            else:
-                self.display_message(f'{data.msg}', "#FF0000")
+            self.display_message(f'{data.msg}')
 
         if isinstance(data, UIEvents.FilesList):
-            self.display_message(f'Server Files {data.files_list}' , "#006600")
+            self.display_message(f'Server Files {data.files_list}', "#006600")
 
         if isinstance(data, UIEvents.UpdateDownloadPercentage):
             print(f'per {data.download_percentage}')
@@ -155,7 +158,6 @@ class GUI(QWidget):
 
     def pause_download(self):
         self.controller.trigger_event(ChatEvents.PauseDownload())
-
 
     def update_activeFriends_list(self, list):
         self.model.clear()
@@ -341,7 +343,6 @@ stylesheet = """
         background-position: center;
     }
 """
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
