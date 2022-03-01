@@ -12,6 +12,8 @@ Chat app with client and server ,That supports downloading files from server usi
 Implementing some of RDT concepts 
 
 
+![](imgs/gui.gif)
+
 </br>
 
 ## How To Run
@@ -26,8 +28,9 @@ Implementing some of RDT concepts
 
 ## How To Use The GUI
 
-![](imgs/gui.gif)
+![](imgs/gui2.gif)
 
+![](imgs/gui3.gif)
 
 </br>
 
