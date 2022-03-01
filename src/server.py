@@ -72,7 +72,7 @@ def delete_file_downloader(client_sock):
         print('remove file downloader failed', e)
 
 
-def handle_data(client_socket, data):
+def handle_data(client_socket, data, address):
     try:
         dj = json.loads(data)
         if dj['type'] == 'disconnect':
@@ -114,8 +114,8 @@ def handle_data(client_socket, data):
             else:
                 print(clients_download.get(client_socket) is None)
                 if clients_download.get(client_socket) is None:
-                    print('got file download req', (client_socket.getsockname()[0], int(dj['port'])))
-                    fd = FileDownload(dj['filename'], IP, (client_socket.getsockname()[0], int(dj['port'])),
+                    print('got file download req', (address[0], int(dj['port'])))
+                    fd = FileDownload(dj['filename'], IP, (address[0], int(dj['port'])),
                                       lambda: delete_file_downloader(client_socket))
                     fd.start()
                     clients_download[client_socket] = fd
@@ -129,7 +129,7 @@ def handle_data(client_socket, data):
         return False
 
 
-def listen_to_client(client_socket):
+def listen_to_client(client_socket, address):
     try:
         while True:
             data = client_socket.recv(1024).decode('UTF-8')
@@ -137,7 +137,7 @@ def listen_to_client(client_socket):
                 break
             else:
                 print('---', data, '---')
-                if not handle_data(client_socket, data):
+                if not handle_data(client_socket, data, address):
                     break
 
     except Exception as e:
@@ -152,4 +152,4 @@ def listen_to_client(client_socket):
 print(f'Server is up on ip {IP} , port {PORT}')
 while 1:
     client_sock, address = sock.accept()
-    threading.Thread(target=listen_to_client, args=(client_sock,)).start()
+    threading.Thread(target=listen_to_client, args=(client_sock, address)).start()

@@ -26,13 +26,13 @@ class FileDownload:
     DUPLICATE_EVENT = 1
     FAST_TRANSMIT = 2
 
-    def __init__(self, file_name, ip, address, finish_callback):
+    def __init__(self, file_name, server_ip, address, finish_callback):
         self.finish_callback = finish_callback
         self.file_name = file_name
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.bind((ip, 0))
+        self.socket.bind((server_ip, 0))
         self.socket.settimeout(MAX_TIME_OUT)
-        self.ip = ip
+        self.ip = server_ip
         self.address = address
         self.state = None
         self.cwd = FRAGMENT_SIZE
