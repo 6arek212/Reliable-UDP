@@ -12,7 +12,6 @@ PORT = 5000
 IP = socket.gethostbyname(socket.gethostname())
 dirname = os.path.dirname(__file__)
 filename = os.path.join(dirname, 'server_files/data')
-print(IP)
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.bind((IP, PORT))
 sock.listen(10)

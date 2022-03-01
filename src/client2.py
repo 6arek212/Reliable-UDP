@@ -6,6 +6,7 @@ import time
 import PyQt5
 from PyQt5 import QtCore, QtGui
 from PyQt5 import QtWidgets
+from PyQt5.QtCore import QObject
 from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QPushButton, QProgressBar
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QMessageBox, QTabWidget
 from PyQt5.QtWidgets import QGridLayout, QScrollArea, QLabel, QListView
@@ -22,7 +23,7 @@ BUTTON_STYLE = """
 QPushButton {
     background-color: #2B5DD1;
     color: #FFFFFF;
-    padding: 20px 0;
+    padding: 10px 0;
     font-size: 20px;
     border-radius: 5px;
 }
@@ -34,11 +35,23 @@ QPushButton:hover {
 
 
 class GUI(QWidget):
+    class Changes(QObject):
+        progress_changed = QtCore.pyqtSignal(int)
+        download_btn_click = QtCore.pyqtSignal(str)
+
     def __init__(self, parent) -> None:
         super(QWidget, self).__init__(parent)
         self.controller = Controller(callback=self.callback)
         self.users = {}
+        self.changes = self.Changes()
         self.GUI_grid()
+
+    def update_download_btn(self, str):
+        if str == 'download_done':
+            self.pbar.setValue(0)
+            self.sendFileButtom.setText("Start Download")
+            self.sendFileButtom.clicked.disconnect()
+            self.sendFileButtom.clicked.connect(self.download_file)
 
     def callback(self, data):
         lock.acquire()
@@ -56,20 +69,10 @@ class GUI(QWidget):
 
         if isinstance(data, UIEvents.UpdateDownloadPercentage):
             print(f'per {data.download_percentage}')
-            self.pbar.setValue(int(data.download_percentage))
+            self.changes.progress_changed.emit(int(data.download_percentage))
+            if data.download_percentage >= 100:
+                self.changes.download_btn_click.emit('download_done')
 
-            if data.download_percentage == 100:
-                self.pbar.setValue(0)
-                self.sendFileButtom.setText("Start Download")
-                self.sendFileButtom.clicked.connect(self.download_file)
-            # if data.download_percentage < 100:
-            #     data.download_percentage
-            #     download_btn.config(text='Pause')
-            #     file_dow_per.config(text='%.2f' % data.download_percentage)
-            # else:
-            #     download_btn.config(text='Download')
-            #     file_dow_per.config(text='Done')
-            # pass
         if isinstance(data, UIEvents.Connect):
             print(f'is connected {data.is_connected}')
             if data.is_connected:
@@ -103,7 +106,6 @@ class GUI(QWidget):
         lock.release()
 
     def login(self):
-
         IP = self.IP_TextLine.text()
         Port = self.Port_TextLine.text()
 
@@ -136,12 +138,12 @@ class GUI(QWidget):
             return
         self.controller.trigger_event(ChatEvents.DownloadFile(file_name))
         self.sendFileButtom.setText("Pause Download")
+        self.sendFileButtom.clicked.disconnect()
         self.sendFileButtom.clicked.connect(self.pause_download)
 
     def pause_download(self):
         self.controller.trigger_event(ChatEvents.PauseDownload())
         self.sendFileButtom.setText("Start Download")
-        # self.sendFileButtom.clicked.connect(self.download_file)
 
     def update_activeFriends_list(self, list):
         self.model.clear()
@@ -270,10 +272,10 @@ class GUI(QWidget):
         self.currentFiles = QPushButton("Files")
 
         self.sendFileButtom = QPushButton("Download File")
-
+        self.changes.download_btn_click.connect(self.update_download_btn)
         self.sendFileButtom.clicked.connect(self.download_file)
         self.pbar = QProgressBar(self)
-
+        self.changes.progress_changed.connect(self.pbar.setValue)
         self.fileEnterText = QLineEdit()
         self.fileEnterText.setText("a1.pdf")
 
@@ -300,6 +302,7 @@ class GUI(QWidget):
 
 
 class MainWindow(QMainWindow):
+
     def __init__(self):
         super(MainWindow, self).__init__()
         # self.setStyleSheet("background-color: cyan;")
