@@ -55,20 +55,21 @@ class GUI(QWidget):
             self.sendFileButtom.clicked.connect(self.download_file)
 
     def set_pause_state(self, paused):
-        print('aaaaaaa ', paused)
+
         if paused:
-            self.sendFileButtom.setText("Start Download")
+            self.sendFileButtom.setText("▶ Start Download")
         else:
-            self.sendFileButtom.setText("Pause Download")
+            self.sendFileButtom.setText("⏸ Pause  Download")
 
     def callback(self, data):
         lock.acquire()
 
         if isinstance(data, UIEvents.PublicMessage):
-            self.display_message(f'{data.msg}', "#006600")
+            print(self.emojiPick)
+            self.display_message(f'✉️{data.msg} {self.emojiPick}', "#006600")
 
         if isinstance(data, UIEvents.PrivateMessage):
-            self.display_message(f'{data.msg}', "#FF0000")
+            self.display_message(f'✉️{data.msg} {self.emojiPick}', "#FF0000")
 
         if isinstance(data, UIEvents.Pause):
             self.changes.pause.emit(data.is_paused)
@@ -88,12 +89,12 @@ class GUI(QWidget):
         if isinstance(data, UIEvents.Connect):
             print(f'is connected {data.is_connected}')
             if data.is_connected:
-                self.connEvent.setText('Connected')
+                self.connEvent.setText('Connected ✅')
                 self.connBtn.setDisabled(True)
                 self.disconnBtn.setDisabled(False)
                 self.tabs.setTabEnabled(1, True)
             else:
-                self.connEvent.setText('Not Connected')
+                self.connEvent.setText('Not Connected ❌')
                 self.connBtn.setDisabled(False)
                 self.disconnBtn.setDisabled(True)
                 self.tabs.setTabEnabled(1, False)
@@ -151,7 +152,7 @@ class GUI(QWidget):
         if file_name == '':
             return
         self.controller.trigger_event(ChatEvents.DownloadFile(file_name))
-        self.sendFileButtom.setText("Pause Download")
+        self.sendFileButtom.setText("⏸️Pause Download")
         self.sendFileButtom.clicked.disconnect()
         self.sendFileButtom.clicked.connect(self.pause_download)
 
@@ -196,6 +197,9 @@ class GUI(QWidget):
     def send_choice(self, text):
         self.send_to = text
         self.sendChoice.setText("Talking with: " + text)
+    def emojiSelctor(self, text):
+        self.emojiPick = text
+        # self.sendChoice.setText("Talking with: " + text)
 
     def GUI_grid(self):
         self.layout = QVBoxLayout(self)
@@ -203,28 +207,28 @@ class GUI(QWidget):
         self.tabs.resize(300, 200)
         self.tab1 = QWidget()
         self.tab2 = QWidget()
-        self.tabs.addTab(self.tab1, "Home")
-        self.tabs.addTab(self.tab2, "Chat Room")
+        self.tabs.addTab(self.tab1, "Home 🏠")
+        self.tabs.addTab(self.tab2, "Chat Room 🟩")
         self.tabs.setTabEnabled(1, False)
         # <Home>
         gridHome = QGridLayout()
         self.tab1.setLayout(gridHome)
 
-        self.IP_Box = QGroupBox("IP")
+        self.IP_Box = QGroupBox("IP 🖥️")
         self.IP_TextLine = QLineEdit()
         self.IP_TextLine.setText("127.0.0.1")
         IPBoxLayout = QVBoxLayout()
         IPBoxLayout.addWidget(self.IP_TextLine)
         self.IP_Box.setLayout(IPBoxLayout)
 
-        self.Port_Box = QGroupBox("Port")
+        self.Port_Box = QGroupBox("Port 🔌")
         self.Port_TextLine = QLineEdit()
         self.Port_TextLine.setText("5000")
         portBoxLayout = QVBoxLayout()
         portBoxLayout.addWidget(self.Port_TextLine)
         self.Port_Box.setLayout(portBoxLayout)
 
-        self.nameBox = QGroupBox("Name")
+        self.nameBox = QGroupBox("Name 🧑‍🎓")
         self.nameLineEdit = QtWidgets.QLineEdit()
         self.nameLineEdit.setStyleSheet(
             """QLineEdit { background-color: green; color: white; padding:20px;  font-size:26px; }""")
@@ -235,11 +239,12 @@ class GUI(QWidget):
         font = QFont()
         font.setPointSize(16)
         self.connEvent.setFont(font)
-        self.connEvent.setText('Not Connected')
-        self.connBtn = QPushButton("Connect")
+        self.connEvent.setText('Not Connected ❌')
+        self.connBtn = QPushButton("Connect ✔️")
         self.connBtn.setStyleSheet(BUTTON_STYLE)
         self.connBtn.clicked.connect(self.login)
-        self.disconnBtn = QPushButton("Disconnect")
+        self.connBtn.clicked.connect(self.login)
+        self.disconnBtn = QPushButton("Disconnect ❌")
         self.disconnBtn.setStyleSheet(BUTTON_STYLE)
         self.disconnBtn.setDisabled(True)
         self.disconnBtn.clicked.connect(self.login)
@@ -266,12 +271,15 @@ class GUI(QWidget):
         self.scrollRecords.setWidgetResizable(True)
         self.send_to = "ALL"
         self.sendChoice = QLabel("Talking to :ALL", self)
+
         self.sendComboBox = QComboBox(self)
         self.sendComboBox.addItem("ALL")
         self.sendComboBox.activated[str].connect(self.send_choice)
         self.lineEdit = QLineEdit()
 
-        self.lineEnterBtn = QPushButton("Send")
+
+
+        self.lineEnterBtn = QPushButton("Send 📩️")
         self.lineEnterBtn.clicked.connect(self.send_message)
 
         # self.lineEdit.returnPressed.connect(self.enter_line)
@@ -282,9 +290,9 @@ class GUI(QWidget):
         # chat room
 
         self.activeFriends = QPushButton("Active Friends")
-        self.currentFiles = QPushButton("Files")
+        self.currentFiles = QPushButton("Files 📁")
 
-        self.sendFileButtom = QPushButton("Download File")
+        self.sendFileButtom = QPushButton("▶ Download File")
         self.changes.pause.connect(self.set_pause_state)
         self.changes.download_btn_click.connect(self.update_download_btn)
         self.sendFileButtom.clicked.connect(self.download_file)
@@ -295,6 +303,23 @@ class GUI(QWidget):
 
         self.activeFriends.clicked.connect(self.get_users)
         self.currentFiles.clicked.connect(self.get_files)
+
+
+        #emoji Section
+        self.emojiComboBox = QComboBox(self)
+        self.emojiPick = ""
+        self.emojiComboBox.addItem("Emoji")
+        self.emojiComboBox.addItem(" ")
+        self.emojiComboBox.addItem("😘")
+        self.emojiComboBox.addItem("😄")
+        self.emojiComboBox.addItem("😂")
+        self.emojiComboBox.addItem("😉")
+        self.emojiComboBox.addItem("😑")
+        self.emojiComboBox.addItem("😏")
+        self.emojiComboBox.activated[str].connect(self.emojiSelctor)
+
+
+
         gridChatRoom.addWidget(self.scrollRecords, 0, 0, 1, 3)
         gridChatRoom.addWidget(self.sendFileButtom, 3, 0, 1, 1)
         gridChatRoom.addWidget(self.pbar, 3, 2, 1, 2)
@@ -302,6 +327,7 @@ class GUI(QWidget):
         gridChatRoom.addWidget(self.fileEnterText, 3, 1, 1, 1)
         gridChatRoom.addWidget(self.friendList, 0, 3, 1, 1)
         gridChatRoom.addWidget(self.sendComboBox, 1, 0, 1, 1)
+        gridChatRoom.addWidget(self.emojiComboBox,  1, 2, 3, 2)
         gridChatRoom.addWidget(self.sendChoice, 1, 2, 1, 1)
         gridChatRoom.addWidget(self.lineEdit, 2, 0, 1, 1)
         gridChatRoom.addWidget(self.lineEnterBtn, 2, 1, 1, 1)
