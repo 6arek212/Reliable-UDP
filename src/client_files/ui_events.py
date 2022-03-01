@@ -26,3 +26,13 @@ class UIEvents:
     class FilesList:
         def __init__(self, files_list):
             self.files_list = files_list
+
+    class PrivateMessage:
+        pass
+
+    class PublicMessage:
+        pass
+
+    class Pause:
+        def __init__(self, val):
+            self.is_paused = val

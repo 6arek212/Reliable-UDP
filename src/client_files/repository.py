@@ -123,6 +123,7 @@ class Repository:
         val = 'true' if self.fr.is_paused else 'false'
         self.sock.send(
             f'{{"type":"pause_download","val":{val}}}'.encode())
+        self.callback(UIEvents.Pause(self.fr.is_paused))
 
     def disconnect_event(self):
         self.lock.acquire()

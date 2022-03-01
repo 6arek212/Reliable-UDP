@@ -38,6 +38,7 @@ class GUI(QWidget):
     class Changes(QObject):
         progress_changed = QtCore.pyqtSignal(int)
         download_btn_click = QtCore.pyqtSignal(str)
+        pause = QtCore.pyqtSignal(bool)
 
     def __init__(self, parent) -> None:
         super(QWidget, self).__init__(parent)
@@ -53,9 +54,19 @@ class GUI(QWidget):
             self.sendFileButtom.clicked.disconnect()
             self.sendFileButtom.clicked.connect(self.download_file)
 
+    def set_pause_state(self, paused):
+        print('aaaaaaa ',paused)
+        if paused:
+            self.sendFileButtom.setText("Start Download")
+        else:
+            self.sendFileButtom.setText("Pause Download")
+
+
     def callback(self, data):
         lock.acquire()
 
+        if isinstance(data, UIEvents.Pause):
+            self.changes.pause.emit(data.is_paused)
 
         if isinstance(data, UIEvents.Message):
             if "(Public)" in data.msg:
@@ -144,7 +155,7 @@ class GUI(QWidget):
 
     def pause_download(self):
         self.controller.trigger_event(ChatEvents.PauseDownload())
-        self.sendFileButtom.setText("Start Download")
+
 
     def update_activeFriends_list(self, list):
         self.model.clear()
@@ -273,6 +284,7 @@ class GUI(QWidget):
         self.currentFiles = QPushButton("Files")
 
         self.sendFileButtom = QPushButton("Download File")
+        self.changes.pause.connect(self.set_pause_state)
         self.changes.download_btn_click.connect(self.update_download_btn)
         self.sendFileButtom.clicked.connect(self.download_file)
         self.pbar = QProgressBar(self)
