@@ -55,12 +55,17 @@ class GUI(QWidget):
             self.sendFileButtom.clicked.connect(self.download_file)
 
     def set_pause_state(self, paused):
-        print('aaaaaaa ',paused)
+
         if paused:
             self.sendFileButtom.setText("Start Download")
         else:
             self.sendFileButtom.setText("Pause Download")
 
+
+
+    def emoji(self , msg , emoji , sym):
+         new_msg = msg.replace(sym, emoji)
+         return  new_msg
 
     def callback(self, data):
         lock.acquire()
@@ -69,10 +74,30 @@ class GUI(QWidget):
             self.changes.pause.emit(data.is_paused)
 
         if isinstance(data, UIEvents.Message):
+
+          if ":P" in data.msg:
             if "(Public)" in data.msg:
-                self.display_message(f'{data.msg}', "#006600")
+                self.display_message(f'{self.emoji(data.msg ,"(｡◕∀◕｡)" , ":P") }', "#006600")
             else:
-                self.display_message(f'{data.msg}', "#FF0000")
+                self.display_message(f'{self.emoji(data.msg ,"(｡◕∀◕｡)" , ":P")}', "#FF0000")
+
+          elif ":D" in data.msg:
+              if "(Public)" in data.msg:
+                  self.display_message(f'{self.emoji(data.msg ,"ᕦ(ò_óˇ)ᕤ" , ":D")}', "#006600")
+              else:
+
+                  self.display_message(f'{self.emoji(data.msg, "ᕦ(ò_óˇ)ᕤ", ":D")}', "#FF0000")
+          else:
+              if "(Public)" in data.msg:
+                  self.display_message(f'{data.msg}', "#006600")
+              else:
+                  self.display_message(f'{data.msg}', "#FF0000")
+
+
+
+
+
+
 
         if isinstance(data, UIEvents.FilesList):
             self.display_message(f'Server Files {data.files_list}' , "#006600")
@@ -178,7 +203,8 @@ class GUI(QWidget):
             self.sendComboBox.setCurrentIndex(index)
         else:
             self.sendComboBox.setCurrentIndex(0)
-
+    #"ᕦ(ò_óˇ)ᕤ"
+    #"(｡◕∀◕｡)"
     def clear_display_message(self):
         appendText = "" + '<font color=\"#000000\">Welcome to chat room</font>' + ""
         self.messageRecords.setText(appendText)

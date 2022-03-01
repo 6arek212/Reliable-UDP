@@ -54,6 +54,7 @@ class Repository:
             if json_data['type'] == 'sent_to_all' or json_data['type'] == 'private_message':
                 ui_data = UIEvents.Message(json_data['data'])
 
+
             if json_data['type'] == 'user_disconnected':
                 self.callback(UIEvents.Message(f'{json_data["data"]}, left the chat'))
                 ui_data = UIEvents.UserDisconnected(json_data['data'])
