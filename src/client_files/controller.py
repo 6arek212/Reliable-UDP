@@ -7,8 +7,7 @@ from .ui_events import UIEvents
 class Controller:
 
     def __init__(self, callback) -> None:
-        self.__repo = Repository(callback , self.controller_callback)
-        self.col = 0
+        self.__repo = Repository(callback, self.controller_callback)
         self.is_connected = False
         self.mutex = threading.Lock()
 
@@ -16,7 +15,7 @@ class Controller:
         t1 = threading.Thread(target=self.__event_handler, args=(event,))
         t1.start()
 
-    def controller_callback(self , data):
+    def controller_callback(self, data):
         if isinstance(data, UIEvents.Connect):
             self.is_connected = data.is_connected
 
@@ -25,7 +24,7 @@ class Controller:
             return
         try:
             if isinstance(event, ChatEvents.Connect):
-                self.__connect_to_server(event.ip, event.name)
+                self.__connect_to_server(event.ip, event.port, event.name)
 
             if isinstance(event, ChatEvents.Disconnect):
                 self.__close_connection()
@@ -62,9 +61,9 @@ class Controller:
     def download_file(self, filename):
         self.__repo.get_file(filename)
 
-    def __connect_to_server(self, ip, name):
+    def __connect_to_server(self, ip, port, name):
         if name:
-            self.__repo.connect_to_server(ip, name)
+            self.__repo.connect_to_server(ip, port, name)
 
     def get_name(self):
         return self.__repo.name
@@ -77,4 +76,3 @@ class Controller:
 
     def __close_connection(self):
         self.__repo.disconnect()
-

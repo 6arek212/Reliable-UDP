@@ -20,13 +20,14 @@ class Repository:
         self.callback = callback
         self.lock = threading.Lock()
 
-    def connect_to_server(self, ip, name):
+
+    def connect_to_server(self, ip ,port, name):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.name = name
         mip = SERVER_DEFAULT_IP if (ip is None or not ip) else ip
         print('server ip is ', mip, name)
         try:
-            self.sock.connect((mip, PORT))
+            self.sock.connect((mip, port))
             self.sock.send(f'{{"name": "{name}","type":"connect"}}'.encode())
             self.callback(UIEvents.Connect(True))
             self.controller_callback(UIEvents.Connect(True))

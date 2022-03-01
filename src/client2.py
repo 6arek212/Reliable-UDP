@@ -5,7 +5,7 @@ import time
 import PyQt5
 from PyQt5 import QtCore, QtGui
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QPushButton
+from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QPushButton, QProgressBar
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QMessageBox, QTabWidget
 from PyQt5.QtWidgets import QGridLayout, QScrollArea, QLabel, QListView
 from PyQt5.QtWidgets import QLineEdit, QComboBox, QGroupBox, QAction
@@ -36,8 +36,8 @@ class GUI(QWidget):
     def __init__(self, parent) -> None:
         super(QWidget, self).__init__(parent)
         self.controller = Controller(callback=self.callback)
-        self.GUI_grid()
         self.users = {}
+        self.GUI_grid()
 
     def callback(self, data):
         lock.acquire()
@@ -49,13 +49,21 @@ class GUI(QWidget):
             self.display_message(f'Server Files {data.files_list}')
 
         if isinstance(data, UIEvents.UpdateDownloadPercentage):
+            print(f'per {data.download_percentage}')
+            self.pbar.setValue(int(data.download_percentage))
+
+            if data.download_percentage == 100:
+                self.pbar.setValue(0)
+                self.sendFileButtom.setText("Start Download")
+                self.sendFileButtom.clicked.connect(self.download_file)
             # if data.download_percentage < 100:
+            #     data.download_percentage
             #     download_btn.config(text='Pause')
             #     file_dow_per.config(text='%.2f' % data.download_percentage)
             # else:
             #     download_btn.config(text='Download')
             #     file_dow_per.config(text='Done')
-            pass
+            # pass
         if isinstance(data, UIEvents.Connect):
             print(f'is connected {data.is_connected}')
             if data.is_connected:
@@ -89,8 +97,18 @@ class GUI(QWidget):
         lock.release()
 
     def login(self):
+
+        IP = self.IP_TextLine.text()
+        Port = self.Port_TextLine.text()
+
+        if Port == "" or not Port.isnumeric():
+            self.Port_TextLine.setText("5000")
+            self.connEvent.setText("Event: " + "Error Port Format")
+        else:
+            Port = int(Port)
+
         if not self.controller.is_connected:
-            self.controller.trigger_event(ChatEvents.Connect('', self.nameLineEdit.text()))
+            self.controller.trigger_event(ChatEvents.Connect(IP, Port, self.nameLineEdit.text()))
         else:
             self.controller.trigger_event(ChatEvents.Disconnect())
 
@@ -106,12 +124,18 @@ class GUI(QWidget):
         self.lineEdit.setText('')
 
     def download_file(self):
-        self.controller.trigger_event(ChatEvents.DownloadFile('a1.pdf'))
-        self.sendFileButtom.setDisabled(True)
+        file_name = self.fileEnterText.text()
+        # need to check if file in the list
+        if file_name == "":
+            return
+        self.controller.trigger_event(ChatEvents.DownloadFile(file_name))
+        self.sendFileButtom.setText("Pause Download")
+        self.sendFileButtom.clicked.connect(self.pause_download)
 
     def pause_download(self):
         self.controller.trigger_event(ChatEvents.PauseDownload())
-
+        self.sendFileButtom.setText("Start Download")
+        # self.sendFileButtom.clicked.connect(self.download_file)
 
     def update_activeFriends_list(self, list):
         self.model.clear()
@@ -126,7 +150,7 @@ class GUI(QWidget):
         for name in list:
             if name != self.controller.get_name():
                 self.sendComboBox.addItem(name)
-        previous = self.sendTo
+        previous = self.send_to
         index = self.sendComboBox.findText(previous)
 
         # current name we are at
@@ -164,6 +188,21 @@ class GUI(QWidget):
         # <Home>
         gridHome = QGridLayout()
         self.tab1.setLayout(gridHome)
+
+        self.IP_Box = QGroupBox("IP")
+        self.IP_TextLine = QLineEdit()
+        self.IP_TextLine.setText("127.0.0.1")
+        IPBoxLayout = QVBoxLayout()
+        IPBoxLayout.addWidget(self.IP_TextLine)
+        self.IP_Box.setLayout(IPBoxLayout)
+
+        self.Port_Box = QGroupBox("Port")
+        self.Port_TextLine = QLineEdit()
+        self.Port_TextLine.setText("5000")
+        portBoxLayout = QVBoxLayout()
+        portBoxLayout.addWidget(self.Port_TextLine)
+        self.Port_Box.setLayout(portBoxLayout)
+
         self.nameBox = QGroupBox("Name")
         self.nameLineEdit = QtWidgets.QLineEdit()
         self.nameLineEdit.setStyleSheet(
@@ -183,8 +222,10 @@ class GUI(QWidget):
         self.disconnBtn.setStyleSheet(BUTTON_STYLE)
         self.disconnBtn.setDisabled(True)
         self.disconnBtn.clicked.connect(self.login)
-        gridHome.addWidget(self.nameBox, 0, 0, 1, 1)
-        gridHome.addWidget(self.connEvent, 0, 1)
+        gridHome.addWidget(self.IP_Box, 0, 0, 1, 1)
+        gridHome.addWidget(self.Port_Box, 0, 1, 1, 1)
+        gridHome.addWidget(self.nameBox, 1, 0, 1, 1)
+        gridHome.addWidget(self.connEvent, 1, 1, 1, 1)
         gridHome.addWidget(self.connBtn, 2, 0, 1, 1)
         gridHome.addWidget(self.disconnBtn, 2, 1, 1, 1)
         gridHome.setColumnStretch(0, 1)
@@ -202,7 +243,7 @@ class GUI(QWidget):
         self.scrollRecords = QScrollArea()
         self.scrollRecords.setWidget(self.messageRecords)
         self.scrollRecords.setWidgetResizable(True)
-        self.sendTo = "ALL"
+        self.send_to = "ALL"
         self.sendChoice = QLabel("Talking to :ALL", self)
         self.sendComboBox = QComboBox(self)
         self.sendComboBox.addItem("ALL")
@@ -211,26 +252,32 @@ class GUI(QWidget):
 
         self.lineEnterBtn = QPushButton("Send")
         self.lineEnterBtn.clicked.connect(self.send_message)
+
         # self.lineEdit.returnPressed.connect(self.enter_line)
         self.friendList = QListView()
         self.friendList.setWindowTitle('Room List')
         self.model = QStandardItemModel(self.friendList)
         self.friendList.setModel(self.model)
         # chat room
-        self.sendFileButtom = QPushButton("Download File")
-        self.sendFileButtom.clicked.connect(self.download_file)
 
         self.activeFriends = QPushButton("Active Friends")
         self.currentFiles = QPushButton("Files")
-        self.pauseBtn = QPushButton("Pause")
-        self.pauseBtn.clicked.connect(self.pause_download)
+
+        self.sendFileButtom = QPushButton("Download File")
+
+        self.sendFileButtom.clicked.connect(self.download_file)
+        self.pbar = QProgressBar(self)
+
+        self.fileEnterText = QLineEdit()
+        self.fileEnterText.setText("a1.pdf")
+
         self.activeFriends.clicked.connect(self.get_users)
         self.currentFiles.clicked.connect(self.get_files)
         gridChatRoom.addWidget(self.scrollRecords, 0, 0, 1, 3)
         gridChatRoom.addWidget(self.sendFileButtom, 3, 0, 1, 1)
-        gridChatRoom.addWidget(self.activeFriends, 1, 1, 1, 1)
-        gridChatRoom.addWidget(self.currentFiles, 3, 2, 1, 2)
-        gridChatRoom.addWidget(self.pauseBtn, 3, 1, 1, 1)
+        gridChatRoom.addWidget(self.pbar, 3, 2, 1, 2)
+        gridChatRoom.addWidget(self.currentFiles, 1, 1, 1, 1)
+        gridChatRoom.addWidget(self.fileEnterText, 3, 1, 1, 1)
         gridChatRoom.addWidget(self.friendList, 0, 3, 1, 1)
         gridChatRoom.addWidget(self.sendComboBox, 1, 0, 1, 1)
         gridChatRoom.addWidget(self.sendChoice, 1, 2, 1, 1)
@@ -250,7 +297,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         # self.setStyleSheet("background-color: cyan;")
-        self.setGeometry(50, 50, 1000, 800)
+        self.setGeometry(50, 50, 600, 500)
         self.center()
         self.setWindowTitle("Messenger")
         self.table_widget = GUI(self)

@@ -12,8 +12,9 @@ class ChatEvents:
         pass
 
     class Connect():
-        def __init__(self, ip: str, name: str):
+        def __init__(self, ip: str, port: int, name: str):
             self.ip = ip
+            self.port = port
             self.name = name
 
     class Disconnect():
