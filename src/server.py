@@ -4,6 +4,7 @@ import json
 from os import listdir
 from os.path import isfile, join
 import os
+from time import sleep
 
 from server_files.file_download import FileDownload
 
@@ -37,7 +38,7 @@ def get_files(client_socket):
 def get_users(client_socket=None):
     users = []
     for user in clients_names.keys():
-        users.append(user.capitalize())
+        users.append(user)
     if client_socket is not None:
         client_socket.send(json_response('get_users', users).encode())
     return users
@@ -82,8 +83,9 @@ def handle_data(client_socket, data):
 
         if dj['type'] == 'connect':
             clients_names[dj['name']] = client_socket
-            client_socket.send(json_response('get_users', get_users()).encode())
             send_to_all(client_socket, f'{dj["name"]}', 'new_user')
+            sleep(.005)
+            client_socket.send(json_response('get_users', get_users()).encode())
 
         if dj['type'] == 'message-all':
             send_to_all(client_socket, dj['message'])
@@ -143,6 +145,7 @@ def listen_to_client(client_socket):
         for (key, value) in clients_names.items():
             if value is client_sock:
                 clients_names.pop(key)
+                break
         client_socket.close()
 
 

@@ -11,12 +11,14 @@ PORT = 5000
 
 class Repository:
 
-    def __init__(self, callback) -> None:
+    def __init__(self, callback, controller_callback) -> None:
         self.sock = None
         self.name = None
+        self.controller_callback = controller_callback
         self.is_connected = False
         self.fr = None
         self.callback = callback
+        self.lock = threading.Lock()
 
     def connect_to_server(self, ip, name):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -27,22 +29,23 @@ class Repository:
             self.sock.connect((mip, PORT))
             self.sock.send(f'{{"name": "{name}","type":"connect"}}'.encode())
             self.callback(UIEvents.Connect(True))
+            self.controller_callback(UIEvents.Connect(True))
             self.is_connected = True
             threading.Thread(target=self.listen).start()
         except Exception as e:
-            self.is_connected = False
+            self.disconnect_event()
             print('connect_to_server', e)
 
     def handle_incoming_data(self, data):
         try:
-            print('in data ',data)
+            print('in data ', data)
             json_data = json.loads(data)
             if 'type' not in json_data:
                 raise Exception('something wrong with incoming json')
 
             ui_data = None
             if json_data['type'] == 'get_files':
-                ui_data = UIEvents.Message(json_data['data'])
+                ui_data = UIEvents.FilesList(json_data['data'])
 
             if json_data['type'] == 'get_users':
                 ui_data = UIEvents.OnlineUsers(json_data['data'])
@@ -63,18 +66,18 @@ class Repository:
             print('handle_incoming_data', e)
 
     def listen(self):
-        while self.is_connected:
-            try:
+        try:
+            while self.is_connected:
                 data = self.sock.recv(1024).decode('UTF-8')
                 if not data:
                     break
                 else:
                     self.handle_incoming_data(data)
-            except Exception as e:
-                print(e)
-                self.is_connected = False
+        except Exception as e:
+            print(e)
+
         self.sock.close()
-        self.callback(UIEvents.Message(f'{self.name} disconnected'))
+        self.disconnect_event()
 
     def send_msg_to_all(self, msg):
         if not self.is_connected:
@@ -120,9 +123,17 @@ class Repository:
         self.sock.send(
             f'{{"type":"pause_download","val":{val}}}'.encode())
 
+    def disconnect_event(self):
+        self.lock.acquire()
+        if self.is_connected:
+            self.callback(UIEvents.Message(f'{self.name} disconnected'))
+            self.callback(UIEvents.Connect(False))
+            self.is_connected = False
+            self.controller_callback(UIEvents.Connect(False))
+        self.lock.release()
+
     def disconnect(self):
         if not self.is_connected:
             raise Exception('you need to connect to the server_files first !')
         self.sock.send(f'{{"name": "{self.name}","type":"disconnect"}}'.encode())
-        self.is_connected = False
-        self.callback(UIEvents.Connect(False))
+        self.disconnect_event()

@@ -22,3 +22,7 @@ class UIEvents:
     class UserDisconnected:
         def __init__(self, user):
             self.user = user
+
+    class FilesList:
+        def __init__(self, files_list):
+            self.files_list = files_list

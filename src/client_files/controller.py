@@ -1,12 +1,13 @@
 from .repository import Repository
 import threading
 from .events import ChatEvents
+from .ui_events import UIEvents
 
 
 class Controller:
 
     def __init__(self, callback) -> None:
-        self.__repo = Repository(callback)
+        self.__repo = Repository(callback , self.controller_callback)
         self.col = 0
         self.is_connected = False
         self.mutex = threading.Lock()
@@ -14,6 +15,10 @@ class Controller:
     def trigger_event(self, event):
         t1 = threading.Thread(target=self.__event_handler, args=(event,))
         t1.start()
+
+    def controller_callback(self , data):
+        if isinstance(data, UIEvents.Connect):
+            self.is_connected = data.is_connected
 
     def __event_handler(self, event):
         if event is None:
@@ -58,9 +63,9 @@ class Controller:
         self.__repo.get_file(filename)
 
     def __connect_to_server(self, ip, name):
-        self.__repo.connect_to_server(ip, name)
-        if self.__repo.is_connected:
-            self.is_connected = True
+        if name:
+            self.__repo.connect_to_server(ip, name)
+
 
     def __send_msg(self, msg):
         self.__repo.send_msg_to_all(msg)
@@ -70,5 +75,4 @@ class Controller:
 
     def __close_connection(self):
         self.__repo.disconnect()
-        if not self.__repo.is_connected:
-            self.is_connected = False
+
