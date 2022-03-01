@@ -188,7 +188,7 @@ class GUI(QWidget):
 
     def display_message(self, newMessage, textColor="#000000"):
         oldText = self.messageRecords.text()
-        appendText = oldText + "<br /><font color=\"" + textColor + "\">" + newMessage + "</font><font color=\"#000000\"></font>"
+        appendText = oldText + f"<br /><font color=\"{ textColor}\" style=\"font-size:18px\" >" + newMessage + "</font>"
         self.messageRecords.setText(appendText)
         time.sleep(0.2)
         self.scrollRecords.verticalScrollBar().setValue(self.scrollRecords.verticalScrollBar().maximum())
