@@ -145,12 +145,10 @@ def listen_to_client(client_socket, address):
 
     except Exception as e:
         print('listen_to_client', e)
-        clients_names.pop(clients_address.get(address))
-        clients_address.pop(address)
-        # for (key, value) in clients_names.items():
-        #     if value is client_sock:
-        #         clients_names.pop(key)
-        #         break
+        if address in clients_address:
+            print('removed client stuff')
+            clients_names.pop(clients_address.get(address))
+            clients_address.pop(address)
         client_socket.close()
 
 

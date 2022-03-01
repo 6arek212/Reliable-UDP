@@ -55,7 +55,6 @@ class GUI(QWidget):
             self.sendFileButtom.clicked.connect(self.download_file)
 
     def set_pause_state(self, paused):
-        print('aaaaaaa ', paused)
         if paused:
             self.sendFileButtom.setText("Start Download")
         else:
