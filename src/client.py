@@ -296,7 +296,7 @@ class GUI(QWidget):
         self.pbar = QProgressBar(self)
         self.changes.progress_changed.connect(self.pbar.setValue)
         self.fileEnterText = QLineEdit()
-        self.fileEnterText.setText("a1.pdf")
+        self.fileEnterText.setText("")
 
         self.activeFriends.clicked.connect(self.get_users)
         self.currentFiles.clicked.connect(self.get_files)
