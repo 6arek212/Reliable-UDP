@@ -26,10 +26,7 @@ Implementing some of RDT concepts
 
 ## How To Use The GUI
 
-- `Enter IP , PORT , NAME -> then connect` 
-- `Chat Rom tab`
-- `Send public\private messages`
-- `Download files from the server`
+![](imgs/gui.gif)
 
 
 </br>
