@@ -141,17 +141,17 @@ class GUI(QWidget):
         lock.release()
 
     def login(self):
-        IP = self.IP_TextLine.text()
-        Port = self.Port_TextLine.text()
+        ip = self.IP_TextLine.text()
+        port = self.Port_TextLine.text()
 
-        if Port == "" or not Port.isnumeric():
+        if port == "" or not port.isnumeric():
             self.Port_TextLine.setText("5000")
             self.connEvent.setText("Event: " + "Error Port Format")
         else:
-            Port = int(Port)
+            port = int(port)
 
         if not self.controller.is_connected:
-            self.controller.trigger_event(ChatEvents.Connect(IP, Port, self.nameLineEdit.text()))
+            self.controller.trigger_event(ChatEvents.Connect(ip, port, self.nameLineEdit.text()))
         else:
             self.controller.trigger_event(ChatEvents.Disconnect())
 
