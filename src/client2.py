@@ -58,11 +58,10 @@ class GUI(QWidget):
 
 
         if isinstance(data, UIEvents.Message):
-
             if "(Public)" in data.msg:
-                self.display_message(f'{data.msg}', "#cc33cc")
-            else:
                 self.display_message(f'{data.msg}', "#006600")
+            else:
+                self.display_message(f'{data.msg}', "#FF0000")
 
         if isinstance(data, UIEvents.FilesList):
             self.display_message(f'Server Files {data.files_list}' , "#006600")
