@@ -73,20 +73,18 @@ class GUI(QWidget):
         if isinstance(data, UIEvents.OnlineUsers):
             for user in data.users:
                 self.users[user] = user
-                self.sendComboBox.addItem(self.users[user])
             self.update_activeFriends_list(data.users)
+            self.update_send_to_list(self.users)
 
         if isinstance(data, UIEvents.UserDisconnected):
             self.users.pop(data.user)
             self.update_activeFriends_list(self.users)
-            # for user in self.users:
-            #     self.sendComboBox.addItem(self.users[user])
-            self.sendComboBox.addItems(self.users)
+            self.update_send_to_list(self.users)
+
         if isinstance(data, UIEvents.NewUser):
             self.users[data.user] = data.user
             self.update_activeFriends_list(self.users)
-            self.sendComboBox.addItems(self.users)
-
+            self.update_send_to_list(self.users)
 
         lock.release()
 
@@ -103,15 +101,17 @@ class GUI(QWidget):
         self.controller.trigger_event(ChatEvents.GetFiles())
 
     def send_message(self):
-        self.controller.trigger_event(ChatEvents.Message(
-            msg=self.lineEdit.text(), to=None))
+        self.controller.trigger_event(ChatEvents.SendMessage(
+            msg=self.lineEdit.text(), to=self.send_to if self.send_to != 'ALL' else None))
         self.lineEdit.setText('')
 
     def download_file(self):
-        self.controller.trigger_event(ChatEvents.DownloadFile('FILE NAME HERE'))
+        self.controller.trigger_event(ChatEvents.DownloadFile('a1.pdf'))
+        self.sendFileButtom.setDisabled(True)
 
     def pause_download(self):
         self.controller.trigger_event(ChatEvents.PauseDownload())
+
 
     def update_activeFriends_list(self, list):
         self.model.clear()
@@ -120,14 +120,12 @@ class GUI(QWidget):
             item.setCheckable(False)
             self.model.appendRow(item)
 
-    def update_send_to_list(self, strList):
-        L = strList.split("|")
-
+    def update_send_to_list(self, list):
         self.sendComboBox.clear()
         self.sendComboBox.addItem("ALL")
-        for person in L:
-            if person != self.name:
-                self.sendComboBox.addItem(person)
+        for name in list:
+            if name != self.controller.get_name():
+                self.sendComboBox.addItem(name)
         previous = self.sendTo
         index = self.sendComboBox.findText(previous)
 
@@ -138,7 +136,6 @@ class GUI(QWidget):
             self.sendComboBox.setCurrentIndex(0)
 
     def clear_display_message(self):
-        oldText = self.messageRecords.text()
         appendText = "" + '<font color=\"#000000\">Welcome to chat room</font>' + ""
         self.messageRecords.setText(appendText)
         time.sleep(0.2)  # this helps the bar set to bottom, after all message already appended
@@ -152,11 +149,10 @@ class GUI(QWidget):
         self.scrollRecords.verticalScrollBar().setValue(self.scrollRecords.verticalScrollBar().maximum())
 
     def send_choice(self, text):
-        self.sendTo = text
+        self.send_to = text
         self.sendChoice.setText("Talking with: " + text)
 
     def GUI_grid(self):
-
         self.layout = QVBoxLayout(self)
         self.tabs = QTabWidget()
         self.tabs.resize(300, 200)
@@ -210,7 +206,7 @@ class GUI(QWidget):
         self.sendChoice = QLabel("Talking to :ALL", self)
         self.sendComboBox = QComboBox(self)
         self.sendComboBox.addItem("ALL")
-        # self.sendComboBox.activated[str].connect(self.send_choice)
+        self.sendComboBox.activated[str].connect(self.send_choice)
         self.lineEdit = QLineEdit()
 
         self.lineEnterBtn = QPushButton("Send")
@@ -222,12 +218,12 @@ class GUI(QWidget):
         self.friendList.setModel(self.model)
         # chat room
         self.sendFileButtom = QPushButton("Download File")
-        # self.sendFileButtom.clicked.connect(self.get_file)
+        self.sendFileButtom.clicked.connect(self.download_file)
 
         self.activeFriends = QPushButton("Active Friends")
         self.currentFiles = QPushButton("Files")
         self.pauseBtn = QPushButton("Pause")
-        # self.pauseBtn.clicked.connect(self.download_file)
+        self.pauseBtn.clicked.connect(self.pause_download)
         self.activeFriends.clicked.connect(self.get_users)
         self.currentFiles.clicked.connect(self.get_files)
         gridChatRoom.addWidget(self.scrollRecords, 0, 0, 1, 3)

@@ -58,7 +58,7 @@ def send_to_all(client_socket, msg, type=None):
 
 def send_to(to, msg):
     try:
-        clients_names[to].send(json_response('private_message', msg).encode())
+        clients_names[to].send(json_response('private_message', f'(Private) {msg}').encode())
     except Exception as e:
         print(e)
 

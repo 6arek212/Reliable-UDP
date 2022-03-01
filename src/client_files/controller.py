@@ -30,7 +30,7 @@ class Controller:
             if isinstance(event, ChatEvents.Disconnect):
                 self.__close_connection()
 
-            if isinstance(event, ChatEvents.Message):
+            if isinstance(event, ChatEvents.SendMessage):
                 if event.to is None or not event.to:
                     self.__send_msg(event.msg)
                 else:
@@ -66,6 +66,8 @@ class Controller:
         if name:
             self.__repo.connect_to_server(ip, name)
 
+    def get_name(self):
+        return self.__repo.name
 
     def __send_msg(self, msg):
         self.__repo.send_msg_to_all(msg)

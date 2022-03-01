@@ -57,7 +57,8 @@ class FileRepository:
         if self.is_paused:
             self.ui_message_callback(UIEvents.Message(f'Download paused , Downloaded {"%.2f" % (self.seq / 1000)} KB'))
         if not self.is_paused:
-            self.ui_message_callback(UIEvents.Message(f'Download proceeded , Downloaded {"%.2f" % (self.seq / 1000)} KB'))
+            self.ui_message_callback(
+                UIEvents.Message(f'Download proceeded , Downloaded {"%.2f" % (self.seq / 1000)} KB'))
             self.lock.acquire()
             self.state = None
             self.lock.notify_all()
@@ -74,15 +75,15 @@ class FileRepository:
                 self.lock.acquire()
                 ra = random.uniform(0, 1)
 
-                if ra < 0.95:
-                    if self.recv_buffer_size + len(data) < BUFFER_SIZE:
-                        self.recv_buffer_size += len(data)
-                        self.rev_buffer.append((data, address))
-                    else:
-                        packet = RudpPacket().unpack(data)
-                        print('packet was thrown because buffer is full ', packet)
+                # if ra < 0.95:
+                if self.recv_buffer_size + len(data) < BUFFER_SIZE:
+                    self.recv_buffer_size += len(data)
+                    self.rev_buffer.append((data, address))
                 else:
-                    print('throw')
+                    packet = RudpPacket().unpack(data)
+                    print('packet was thrown because buffer is full ', packet)
+                # else:
+                #     print('throw')
                 self.lock.release()
             except socket.timeout as e:
                 print(e, self.is_paused)

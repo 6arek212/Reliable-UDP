@@ -1,5 +1,5 @@
 class ChatEvents:
-    class Message():
+    class SendMessage():
         def __init__(self, msg: str, to: int = None):
             self.msg = msg
             self.to = to
