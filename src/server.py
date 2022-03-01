@@ -156,3 +156,7 @@ print(f'Server is up on ip {IP} , port {PORT}')
 while 1:
     client_sock, address = sock.accept()
     threading.Thread(target=listen_to_client, args=(client_sock, address)).start()
+
+"""
+    Duplicate names error , must send a connected message letting him know he is connected !! 
+"""
