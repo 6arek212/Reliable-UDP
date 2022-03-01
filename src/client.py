@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import QLineEdit, QComboBox, QGroupBox, QAction
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QFont
 
 from client_files.controller import Controller
-from client_files.events import ChatEvents
+from client_files.chat_events import ChatEvents
 from client_files.ui_events import UIEvents
 
 lock = threading.Lock()

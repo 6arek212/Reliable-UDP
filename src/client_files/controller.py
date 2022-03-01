@@ -1,6 +1,6 @@
 from .repository import Repository
 import threading
-from .events import ChatEvents
+from .chat_events import ChatEvents
 from .ui_events import UIEvents
 
 
