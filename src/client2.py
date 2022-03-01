@@ -1,3 +1,4 @@
+import json
 import sys
 import threading
 import time
@@ -41,12 +42,17 @@ class GUI(QWidget):
 
     def callback(self, data):
         lock.acquire()
+
+
         if isinstance(data, UIEvents.Message):
-            print(data.msg)
-            self.display_message(f'{data.msg}')
+
+            if "(Public)" in data.msg:
+                self.display_message(f'{data.msg}', "#cc33cc")
+            else:
+                self.display_message(f'{data.msg}', "#006600")
 
         if isinstance(data, UIEvents.FilesList):
-            self.display_message(f'Server Files {data.files_list}')
+            self.display_message(f'Server Files {data.files_list}' , "#006600")
 
         if isinstance(data, UIEvents.UpdateDownloadPercentage):
             print(f'per {data.download_percentage}')
@@ -162,14 +168,14 @@ class GUI(QWidget):
     def clear_display_message(self):
         appendText = "" + '<font color=\"#000000\">Welcome to chat room</font>' + ""
         self.messageRecords.setText(appendText)
-        time.sleep(0.2)  # this helps the bar set to bottom, after all message already appended
+        time.sleep(0.2)
         self.scrollRecords.verticalScrollBar().setValue(self.scrollRecords.verticalScrollBar().maximum())
 
     def display_message(self, newMessage, textColor="#000000"):
         oldText = self.messageRecords.text()
         appendText = oldText + "<br /><font color=\"" + textColor + "\">" + newMessage + "</font><font color=\"#000000\"></font>"
         self.messageRecords.setText(appendText)
-        time.sleep(0.2)  # this helps the bar set to bottom, after all message already appended
+        time.sleep(0.2)
         self.scrollRecords.verticalScrollBar().setValue(self.scrollRecords.verticalScrollBar().maximum())
 
     def send_choice(self, text):
@@ -314,9 +320,12 @@ class MainWindow(QMainWindow):
 
 stylesheet = """
     MainWindow {
-        background: #fefefe;
+        background-image: url("server_files//data//back.jpg"); 
+        background-repeat: no-repeat; 
+        background-position: center;
     }
 """
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
