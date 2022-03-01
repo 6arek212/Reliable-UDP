@@ -121,6 +121,8 @@ class GUI(QWidget):
         self.controller.trigger_event(ChatEvents.GetFiles())
 
     def send_message(self):
+        if self.lineEdit.text() == '':
+            return
         self.controller.trigger_event(ChatEvents.SendMessage(
             msg=self.lineEdit.text(), to=self.send_to if self.send_to != 'ALL' else None))
         self.lineEdit.setText('')
@@ -128,7 +130,7 @@ class GUI(QWidget):
     def download_file(self):
         file_name = self.fileEnterText.text()
         # need to check if file in the list
-        if file_name == "":
+        if file_name == '':
             return
         self.controller.trigger_event(ChatEvents.DownloadFile(file_name))
         self.sendFileButtom.setText("Pause Download")
