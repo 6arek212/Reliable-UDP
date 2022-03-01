@@ -21,7 +21,7 @@ BUTTON_STYLE = """
 QPushButton {
     background-color: #2B5DD1;
     color: #FFFFFF;
-    padding: 20px 0;
+    padding: 10px 0;
     font-size: 20px;
     border-radius: 5px;
 }
@@ -51,19 +51,12 @@ class GUI(QWidget):
         if isinstance(data, UIEvents.UpdateDownloadPercentage):
             print(f'per {data.download_percentage}')
             self.pbar.setValue(int(data.download_percentage))
-
-            if data.download_percentage == 100:
+            if data.download_percentage >= 100:
                 self.pbar.setValue(0)
                 self.sendFileButtom.setText("Start Download")
+                self.sendFileButtom.clicked.disconnect()
                 self.sendFileButtom.clicked.connect(self.download_file)
-            # if data.download_percentage < 100:
-            #     data.download_percentage
-            #     download_btn.config(text='Pause')
-            #     file_dow_per.config(text='%.2f' % data.download_percentage)
-            # else:
-            #     download_btn.config(text='Download')
-            #     file_dow_per.config(text='Done')
-            # pass
+
         if isinstance(data, UIEvents.Connect):
             print(f'is connected {data.is_connected}')
             if data.is_connected:
@@ -130,12 +123,13 @@ class GUI(QWidget):
             return
         self.controller.trigger_event(ChatEvents.DownloadFile(file_name))
         self.sendFileButtom.setText("Pause Download")
+        self.sendFileButtom.clicked.disconnect()
         self.sendFileButtom.clicked.connect(self.pause_download)
 
     def pause_download(self):
         self.controller.trigger_event(ChatEvents.PauseDownload())
         self.sendFileButtom.setText("Start Download")
-        # self.sendFileButtom.clicked.connect(self.download_file)
+
 
     def update_activeFriends_list(self, list):
         self.model.clear()
