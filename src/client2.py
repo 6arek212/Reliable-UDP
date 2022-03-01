@@ -65,7 +65,6 @@ class GUI(QWidget):
         lock.acquire()
 
         if isinstance(data, UIEvents.PublicMessage):
-            print(data.msg)
             self.display_message(f'{data.msg}', "#006600")
 
         if isinstance(data, UIEvents.PrivateMessage):
