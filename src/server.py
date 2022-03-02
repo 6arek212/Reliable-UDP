@@ -64,11 +64,11 @@ def send_to(to, msg, address):
         print(e)
 
 
-def delete_file_downloader(client_sock):
+def delete_file_downloader(address):
     try:
-        if client_sock in clients_download:
+        if address in clients_download:
             print('remove file downloader for this client_files')
-            clients_download.pop(client_sock)
+            clients_download.pop(address)
     except Exception as e:
         print('remove file downloader failed', e)
 
@@ -77,6 +77,7 @@ def handle_data(client_socket, data, address):
     try:
         dj = json.loads(data)
         if dj['type'] == 'disconnect':
+            delete_file_downloader(address)
             clients_address.pop(address)
             clients_names.pop(dj['name'])
             send_to_all(client_socket, f'{dj["name"]}', address, 'user_disconnected')
@@ -84,11 +85,12 @@ def handle_data(client_socket, data, address):
             return False
 
         if dj['type'] == 'connect':
-            clients_address[address] = dj['name']
-            clients_names[dj['name']] = client_socket
-            send_to_all(client_socket, f'{dj["name"]}', address, 'new_user')
-            sleep(.05)
-            client_socket.send(json_response('get_users', get_users()).encode())
+            if dj['name'] not in clients_names:
+                clients_address[address] = dj['name']
+                clients_names[dj['name']] = client_socket
+                send_to_all(client_socket, f'{dj["name"]}', address, 'new_user')
+                sleep(.05)
+                client_socket.send(json_response('get_users', get_users()).encode())
 
         if dj['type'] == 'message-all':
             send_to_all(client_socket, dj['message'], address)
@@ -103,28 +105,27 @@ def handle_data(client_socket, data, address):
             get_files(client_socket)
 
         if dj['type'] == 'pause_download':
-            if clients_download.get(client_socket) is None:
+            if clients_download.get(address) is None:
                 client_socket.send(json_response('message', 'you must request to download first !').encode())
             else:
                 if dj['val']:
-                    clients_download.get(client_socket).set_is_paused(True)
+                    clients_download.get(address).set_is_paused(True)
                 else:
-                    clients_download.get(client_socket).set_is_paused(False)
+                    clients_download.get(address).set_is_paused(False)
 
         if dj['type'] == 'get_file':
             if dj['filename'] is None or not dj['filename']:
                 client_socket.send(json_response('message', 'you must attach a file name to the message !').encode())
             else:
-                print(clients_download.get(client_socket) is None)
-                if clients_download.get(client_socket) is None:
+                if clients_download.get(address) is None:
                     print('got file download req', (address[0], int(dj['port'])))
                     fd = FileDownload(dj['filename'], IP, (address[0], int(dj['port'])),
-                                      lambda: delete_file_downloader(client_socket))
+                                      lambda: delete_file_downloader(address))
                     fd.start()
-                    clients_download[client_socket] = fd
+                    clients_download[address] = fd
                 else:
-                    if clients_download.get(client_socket).state == FileDownload.PAUSE:
-                        clients_download.get(client_socket).set_is_paused(False)
+                    if clients_download.get(address).state == FileDownload.PAUSE:
+                        clients_download.get(address).set_is_paused(False)
 
         return True
     except Exception as e:

@@ -97,6 +97,8 @@ class GUI(QWidget):
                 self.disconnBtn.setDisabled(True)
                 self.tabs.setTabEnabled(1, False)
                 self.clear_display_message()
+                self.sendComboBox.clear()
+                self.send_choice('ALL')
 
         if isinstance(data, UIEvents.OnlineUsers):
             for user in data.users:
@@ -140,7 +142,7 @@ class GUI(QWidget):
     def send_message(self):
         if self.lineEdit.text() == '':
             return
-        curr_msg = self.lineEdit.text()+self.emojiPick
+        curr_msg = self.lineEdit.text() + self.emojiPick
         self.controller.trigger_event(ChatEvents.SendMessage(
             msg=curr_msg, to=self.send_to if self.send_to != 'ALL' else None))
         self.lineEdit.setText('')
@@ -188,7 +190,7 @@ class GUI(QWidget):
 
     def display_message(self, newMessage, textColor="#000000"):
         oldText = self.messageRecords.text()
-        appendText = oldText + f"<br /><font color=\"{ textColor}\" style=\"font-size:18px\" >" + newMessage + "</font>"
+        appendText = oldText + f"<br /><font color=\"{textColor}\" style=\"font-size:18px\" >" + newMessage + "</font>"
         self.messageRecords.setText(appendText)
         time.sleep(0.2)
         self.scrollRecords.verticalScrollBar().setValue(self.scrollRecords.verticalScrollBar().maximum())
@@ -199,7 +201,6 @@ class GUI(QWidget):
 
     def emojiSelctor(self, text):
         self.emojiPick = text
-
 
     def GUI_grid(self):
         self.layout = QVBoxLayout(self)
@@ -275,11 +276,8 @@ class GUI(QWidget):
         self.sendComboBox.activated[str].connect(self.send_choice)
         self.lineEdit = QLineEdit()
 
-
-
         self.lineEnterBtn = QPushButton("Send 📩️")
         self.lineEnterBtn.clicked.connect(self.send_message)
-
 
         self.friendList = QListView()
         self.friendList.setWindowTitle('Room List')
@@ -302,8 +300,7 @@ class GUI(QWidget):
         self.activeFriends.clicked.connect(self.get_users)
         self.currentFiles.clicked.connect(self.get_files)
 
-
-        #emoji Section
+        # emoji Section
         self.emojiComboBox = QComboBox(self)
         self.emojiPick = ""
         self.emojiComboBox.addItem("Emoji")
@@ -316,8 +313,6 @@ class GUI(QWidget):
         self.emojiComboBox.addItem("😏")
         self.emojiComboBox.activated[str].connect(self.emojiSelctor)
 
-
-
         gridChatRoom.addWidget(self.scrollRecords, 0, 0, 1, 3)
         gridChatRoom.addWidget(self.sendFileButtom, 3, 0, 1, 1)
         gridChatRoom.addWidget(self.pbar, 3, 2, 1, 2)
@@ -325,7 +320,7 @@ class GUI(QWidget):
         gridChatRoom.addWidget(self.fileEnterText, 3, 1, 1, 1)
         gridChatRoom.addWidget(self.friendList, 0, 3, 1, 1)
         gridChatRoom.addWidget(self.sendComboBox, 1, 0, 1, 1)
-        gridChatRoom.addWidget(self.emojiComboBox,  1, 2, 3, 2)
+        gridChatRoom.addWidget(self.emojiComboBox, 1, 2, 3, 2)
         gridChatRoom.addWidget(self.sendChoice, 1, 2, 1, 1)
         gridChatRoom.addWidget(self.lineEdit, 2, 0, 1, 1)
         gridChatRoom.addWidget(self.lineEnterBtn, 2, 1, 1, 1)
