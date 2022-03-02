@@ -344,7 +344,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         # self.setStyleSheet("background-color: cyan;")
-        self.setWindowIcon(QtGui.QIcon('icon.png'))
+        self.setWindowIcon(QtGui.QIcon('client_files/icon.png'))
         self.setGeometry(50, 50, 600, 500)
         self.center()
         self.setWindowTitle("Messenger")
