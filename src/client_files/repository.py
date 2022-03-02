@@ -93,7 +93,7 @@ class Repository:
 
         self.sock.send(
             f'{{"message": "{msg}","to":"{to}","type":"message-to"}}'.encode())
-        self.callback(UIEvents.PrivateMessage(f'(Me) {msg}'))
+        self.callback(UIEvents.PrivateMessage(f'(Me to {to}) {msg}'))
 
     def get_users(self):
         if not self.is_connected:
