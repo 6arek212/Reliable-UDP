@@ -50,7 +50,7 @@ class GUI(QWidget):
     def update_download_btn(self, str):
         if str == 'download_done':
             self.pbar.setValue(0)
-            self.sendFileButtom.setText("Start Download")
+            self.sendFileButtom.setText("▶ Start Download")
             self.sendFileButtom.clicked.disconnect()
             self.sendFileButtom.clicked.connect(self.download_file)
 
@@ -64,10 +64,10 @@ class GUI(QWidget):
         lock.acquire()
 
         if isinstance(data, UIEvents.PublicMessage):
-            self.display_message(f'✉️{data.msg} {self.emojiPick}', "#006600")
+            self.display_message(f'✉️{data.msg}', "#006600")
 
         if isinstance(data, UIEvents.PrivateMessage):
-            self.display_message(f'✉️{data.msg} {self.emojiPick}', "#FF0000")
+            self.display_message(f'✉️{data.msg}', "#FF0000")
 
         if isinstance(data, UIEvents.Pause):
             self.changes.pause.emit(data.is_paused)
@@ -140,8 +140,9 @@ class GUI(QWidget):
     def send_message(self):
         if self.lineEdit.text() == '':
             return
+        curr_msg = self.lineEdit.text()+self.emojiPick
         self.controller.trigger_event(ChatEvents.SendMessage(
-            msg=self.lineEdit.text(), to=self.send_to if self.send_to != 'ALL' else None))
+            msg=curr_msg, to=self.send_to if self.send_to != 'ALL' else None))
         self.lineEdit.setText('')
 
     def download_file(self):
@@ -194,11 +195,11 @@ class GUI(QWidget):
 
     def send_choice(self, text):
         self.send_to = text
-        self.sendChoice.setText("Talking with: " + text)
-        
+        self.sendChoice.setText("👨 Talking with: " + text)
+
     def emojiSelctor(self, text):
         self.emojiPick = text
-        # self.sendChoice.setText("Talking with: " + text)
+
 
     def GUI_grid(self):
         self.layout = QVBoxLayout(self)
@@ -268,7 +269,7 @@ class GUI(QWidget):
         self.scrollRecords.setWidget(self.messageRecords)
         self.scrollRecords.setWidgetResizable(True)
         self.send_to = "ALL"
-        self.sendChoice = QLabel("Talking to :ALL", self)
+        self.sendChoice = QLabel("👨 Talking to :ALL", self)
         self.sendComboBox = QComboBox(self)
         self.sendComboBox.addItem("ALL")
         self.sendComboBox.activated[str].connect(self.send_choice)
@@ -279,7 +280,7 @@ class GUI(QWidget):
         self.lineEnterBtn = QPushButton("Send 📩️")
         self.lineEnterBtn.clicked.connect(self.send_message)
 
-        # self.lineEdit.returnPressed.connect(self.enter_line)
+
         self.friendList = QListView()
         self.friendList.setWindowTitle('Room List')
         self.model = QStandardItemModel(self.friendList)
@@ -343,6 +344,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         # self.setStyleSheet("background-color: cyan;")
+        self.setWindowIcon(QtGui.QIcon('icon.png'))
         self.setGeometry(50, 50, 600, 500)
         self.center()
         self.setWindowTitle("Messenger")

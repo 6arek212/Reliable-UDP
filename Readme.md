@@ -75,7 +75,7 @@ Implementing some of RDT concepts
 ## Authors
 
 * **Tarik Husin**  - linkedin -> https://www.linkedin.com/in/tarik-husin-706754184/
-* **Wisam Kabha**  - github -> https://github.com/Wissam111
+* **Wissam Kabha**  - github -> https://github.com/Wissam111
 
 </br>
 
