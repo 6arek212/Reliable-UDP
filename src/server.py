@@ -87,7 +87,7 @@ def handle_data(client_socket, data, address):
             clients_address[address] = dj['name']
             clients_names[dj['name']] = client_socket
             send_to_all(client_socket, f'{dj["name"]}', address, 'new_user')
-            sleep(.005)
+            sleep(.05)
             client_socket.send(json_response('get_users', get_users()).encode())
 
         if dj['type'] == 'message-all':
@@ -134,6 +134,7 @@ def handle_data(client_socket, data, address):
 
 def listen_to_client(client_socket, address):
     try:
+        print(f'server listening for client {address}')
         while True:
             data = client_socket.recv(1024).decode('UTF-8')
             if not data:
