@@ -27,10 +27,10 @@ class Repository:
         print(f'server ip is {mip} port {port} name {name}')
         try:
             self.sock.connect((mip, port))
-            self.sock.send(f'{{"name": "{name}","type":"connect"}}'.encode())
+            self.sock.send(f'{{"name": "{name}","type":"connect"}}\0'.encode())
+            self.is_connected = True
             self.callback(UIEvents.Connect(True))
             self.controller_callback(UIEvents.Connect(True))
-            self.is_connected = True
             threading.Thread(target=self.listen).start()
         except Exception as e:
             self.disconnect_event()
@@ -75,7 +75,10 @@ class Repository:
                 if not data:
                     break
                 else:
-                    self.handle_incoming_data(data)
+                    strings = data.split('\0')
+                    for s in strings:
+                        if s.strip():
+                            self.handle_incoming_data(s)
         except Exception as e:
             print(e)
 
@@ -85,14 +88,14 @@ class Repository:
     def send_msg_to_all(self, msg):
         if not self.is_connected:
             raise Exception('you need to connect to the server_files first !')
-        self.sock.send(f'{{"message": "{msg}","type":"message-all"}}'.encode())
+        self.sock.send(f'{{"message": "{msg}","type":"message-all"}}\0'.encode())
 
     def send_msg_to(self, to, msg):
         if not self.is_connected:
             raise Exception('you need to connect to the server_files first !')
 
         self.sock.send(
-            f'{{"message": "{msg}","to":"{to}","type":"message-to"}}'.encode())
+            f'{{"message": "{msg}","to":"{to}","type":"message-to"}}\0'.encode())
         self.callback(UIEvents.PrivateMessage(f'(Me to {to}) {msg}'))
 
     def get_users(self):
@@ -100,14 +103,14 @@ class Repository:
             raise Exception('you need to connect to the server_files first !')
 
         self.sock.send(
-            f'{{"type":"get_users"}}'.encode())
+            f'{{"type":"get_users"}}\0'.encode())
 
     def get_files_list(self):
         if not self.is_connected:
-            raise Exception('you need to connect to the server_files first !')
+            raise Exception('you need to connect to the server first !')
 
         self.sock.send(
-            f'{{"type":"get_files_list"}}'.encode())
+            f'{{"type":"get_files_list"}}\0'.encode())
 
     def get_file(self, filename):
         if not self.is_connected or not filename:
@@ -124,7 +127,7 @@ class Repository:
         print('pausing !', self.fr.is_paused)
         val = 'true' if self.fr.is_paused else 'false'
         self.sock.send(
-            f'{{"type":"pause_download","val":{val}}}'.encode())
+            f'{{"type":"pause_download","val":{val}}}\0'.encode())
         self.callback(UIEvents.Pause(self.fr.is_paused))
 
     def disconnect_event(self):
@@ -139,5 +142,5 @@ class Repository:
     def disconnect(self):
         if not self.is_connected:
             raise Exception('you need to connect to the server_files first !')
-        self.sock.send(f'{{"name": "{self.name}","type":"disconnect"}}'.encode())
+        self.sock.send(f'{{"name": "{self.name}","type":"disconnect"}}\0'.encode())
         self.disconnect_event()

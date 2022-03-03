@@ -4,8 +4,6 @@ import json
 from os import listdir
 from os.path import isfile, join
 import os
-from time import sleep
-
 from server_files.file_download import FileDownload
 
 PORT = 5000
@@ -23,8 +21,8 @@ clients_download = {}
 
 def json_response(type, data):
     if isinstance(data, list):
-        return f'{{"type":"{type}" , "data": {json.dumps(data)}}}'
-    return f'{{"type":"{type}" , "data": "{data}"}}'
+        return f'{{"type":"{type}" , "data": {json.dumps(data)}}}\0'
+    return f'{{"type":"{type}" , "data": "{data}"}}\0'
 
 
 def get_files(client_socket):
@@ -49,7 +47,8 @@ def send_to_all(client_socket, msg, address, type=None):
         try:
             # if sck is not client_socket:
             if type is None:
-                sck.send(json_response('public_message', f'(Public from {clients_address.get(address)}) {msg}').encode())
+                sck.send(
+                    json_response('public_message', f'(Public from {clients_address.get(address)}) {msg}').encode())
             else:
                 sck.send(json_response(type, msg).encode())
         except Exception as e:
@@ -75,13 +74,15 @@ def delete_file_downloader(address):
 
 def handle_data(client_socket, data, address):
     try:
+        print('---', data, '---')
         dj = json.loads(data)
         if dj['type'] == 'disconnect':
-            delete_file_downloader(address)
-            clients_address.pop(address)
-            clients_names.pop(dj['name'])
-            send_to_all(client_socket, f'{dj["name"]}', address, 'user_disconnected')
-            client_socket.close()
+            if address in clients_address:
+                delete_file_downloader(address)
+                clients_address.pop(address)
+                clients_names.pop(dj['name'])
+                send_to_all(client_socket, f'{dj["name"]}', address, 'user_disconnected')
+                client_socket.close()
             return False
 
         if dj['type'] == 'connect':
@@ -89,7 +90,6 @@ def handle_data(client_socket, data, address):
                 clients_address[address] = dj['name']
                 clients_names[dj['name']] = client_socket
                 send_to_all(client_socket, f'{dj["name"]}', address, 'new_user')
-                sleep(.05)
                 client_socket.send(json_response('get_users', get_users()).encode())
 
         if dj['type'] == 'message-all':
@@ -129,21 +129,23 @@ def handle_data(client_socket, data, address):
 
         return True
     except Exception as e:
-        print('handle_data', e)
+        print('handle_data error', e)
         return False
 
 
 def listen_to_client(client_socket, address):
     try:
         print(f'server listening for client {address}')
-        while True:
+        flag = True
+        while flag:
             data = client_socket.recv(1024).decode('UTF-8')
             if not data:
                 break
             else:
-                print('---', data, '---')
-                if not handle_data(client_socket, data, address):
-                    break
+                strings = data.split('\0')
+                for s in strings:
+                    if s.strip() and not handle_data(client_socket, s, address):
+                        flag = False
 
     except Exception as e:
         print('listen_to_client', e)

@@ -79,7 +79,6 @@ class GUI(QWidget):
             self.display_message(f'Server Files {data.files_list}', "#006600")
 
         if isinstance(data, UIEvents.UpdateDownloadPercentage):
-            print(f'per {data.download_percentage}')
             self.changes.progress_changed.emit(int(data.download_percentage))
             if data.download_percentage >= 100:
                 self.changes.download_btn_click.emit('download_done')
