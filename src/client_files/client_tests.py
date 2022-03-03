@@ -1,11 +1,10 @@
+import socket
 import unittest
-from time import sleep
-
 from client_files.chat_events import ChatEvents
 from client_files.controller import Controller
 from client_files.ui_events import UIEvents
 
-SERVER_DEFAULT_IP = "10.113.4.200"
+SERVER_DEFAULT_IP = socket.gethostbyname(socket.gethostname())
 PORT = 5000
 
 
@@ -47,6 +46,21 @@ class ClientTests(unittest.TestCase):
             if isinstance(data, UIEvents.Connect):
                 if data.is_connected:
                     controller.trigger_event(ChatEvents.GetUsers())
+
+        controller = Controller(callback)
+        controller.trigger_event(ChatEvents.Connect(SERVER_DEFAULT_IP, PORT, 'wissam'))
+
+    def test_download_file(self):
+        def callback(data):
+            if isinstance(data, UIEvents.UpdateDownloadPercentage):
+                print(f'{data.download_percentage}')
+                if data.download_percentage >= 100:
+                    controller.trigger_event(ChatEvents.Disconnect())
+                    self.assertTrue(True)
+
+            if isinstance(data, UIEvents.Connect):
+                if data.is_connected:
+                    controller.trigger_event(ChatEvents.DownloadFile('a1.pdf'))
 
         controller = Controller(callback)
         controller.trigger_event(ChatEvents.Connect(SERVER_DEFAULT_IP, PORT, 'wissam'))
