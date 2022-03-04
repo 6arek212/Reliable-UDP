@@ -22,6 +22,12 @@ Implementing some of RDT concepts
 
     python client , python server
 
+<br/>
+
+`MUST DONWLOAD "PyQt5" PACKAGE`
+
+    pip install PyQt5
+
 </br>
 
 
