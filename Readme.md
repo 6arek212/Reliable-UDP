@@ -20,7 +20,8 @@ Implementing some of RDT concepts
 
 `From the terminal : First run the server then the client`
 
-    python client , python server
+    python client.py  
+    python server.py
 
 <br/>
 
