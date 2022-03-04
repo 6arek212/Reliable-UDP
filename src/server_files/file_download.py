@@ -18,7 +18,7 @@ MAX_TIME_OUT = 5
 SHUT_DOWN = 5
 MAX_TRIES = 10
 ALPHA = 0.125
-
+DEFAULT_TIMEOUT = 0.5
 
 class FileDownload:
     PAUSE = 3
@@ -44,7 +44,7 @@ class FileDownload:
         self.dup_ack_cnt = 0
         self.send_all_wind = False
         self.recv_wnd_size = BUFFER_SIZE
-        self.rtt = 0.5
+        self.rtt = DEFAULT_TIMEOUT
         self.send_timer = Timer(self.rtt)
         self.lock = threading.Condition()
 
@@ -212,6 +212,7 @@ class FileDownload:
         self.cwd = FRAGMENT_SIZE
         self.ssthresh = FRAGMENT_SIZE * 8
         self.dup_ack_cnt = 0
+        self.rtt = DEFAULT_TIMEOUT
 
     def send_all_window(self):
         """

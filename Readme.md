@@ -69,8 +69,14 @@ Implementing some of RDT concepts
 
 </br>
 
+## Reliable UDP State Machine
+
+![](imgs/state_machine.jpg)
 
 
+
+
+</br>
 
 ## Authors
 
