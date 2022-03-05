@@ -80,6 +80,11 @@ Implementing some of RDT concepts
 
 ![](imgs/state_machine.jpg)
 
+</br>
+
+## Code Structure
+
+![](imgs/class-diagram.jpg)
 
 
 
