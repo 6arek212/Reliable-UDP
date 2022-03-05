@@ -94,12 +94,12 @@ class FileDownload:
             try:
                 data = self.socket.recv(BUFFER_SIZE)
                 packet = RudpPacket().unpack(data)
+                self.lock.acquire()
 
                 if not ((
                                 packet.type == RudpPacket.TYPE_ACK and (self.state == FileDownload.DUPLICATE_EVENT
                                                                         or self.state == FileDownload.FAST_TRANSMIT)
                                 and packet.ack_num == self.seq) or packet.seqnum > packet.ack_num):
-                    self.lock.acquire()
 
                     if packet.type == RudpPacket.TYPE_ACK:
                         self.handle_acks(packet)
@@ -107,14 +107,16 @@ class FileDownload:
                     if packet.type == RudpPacket.TYPE_FINACK:
                         print('FINACK')
                         self.state = FileDownload.END
-                    self.lock.release()
 
                 else:
                     if packet.seqnum > packet.ack_num:
                         print(f'ack_num < seqnum , Looks like client_files holding packet till   {packet.seqnum}')
+                        self.remove_acked_packets(packet.seqnum)
+                        self.seq = packet.seqnum
                     else:
                         print(f'packet was thrown we are in DUPLICATE state {packet.seqnum}   {packet.ack_num}')
-                        self.remove_acked_packets(packet.seqnum)
+
+                self.lock.release()
 
             except socket.timeout as e:
                 print('listen_to_client', e)
