@@ -5,7 +5,6 @@ import threading
 from client_files.ui_events import UIEvents
 from rudp import RudpPacket
 
-IP = socket.gethostbyname(socket.gethostname())
 BUFFER_SIZE = 10000
 MAX_TIME_OUT = 10
 FRAGMENT_SIZE = 500
@@ -14,8 +13,9 @@ FRAGMENT_SIZE = 500
 class FileRepository:
     DONE = 1
 
-    def __init__(self, sock, ui_message_callback):
+    def __init__(self, sock, my_ip, ui_message_callback):
         self.sock = sock
+        self.my_ip = my_ip
         self.ui_message_callback = ui_message_callback
         self.udp_sock = None
         self.file_name = None
@@ -31,7 +31,6 @@ class FileRepository:
         """
         Downlaod file from the server_files
         :param filename: name of the file to download
-        :param callback: callback for the GUI
         :return:
         """
         self.lock.acquire()
@@ -41,7 +40,7 @@ class FileRepository:
         self.file_name = filename
         self.lock.release()
         self.udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.udp_sock.bind((IP, 0))
+        self.udp_sock.bind((self.my_ip, 0))
         self.udp_sock.settimeout(MAX_TIME_OUT)
         self.sock.send(
             f'{{"type":"get_file" , "filename":"{filename}" , "port":"{self.udp_sock.getsockname()[1]}"}}'.encode())

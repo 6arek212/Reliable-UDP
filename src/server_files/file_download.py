@@ -1,10 +1,9 @@
-import os
 import socket
 import threading
 import time
 from math import ceil
 
-from src.rudp import RudpPacket
+from rudp import RudpPacket
 from server_files.timer import Timer
 import os
 
@@ -19,6 +18,7 @@ SHUT_DOWN = 5
 MAX_TRIES = 10
 ALPHA = 0.125
 DEFAULT_TIMEOUT = 0.5
+
 
 class FileDownload:
     PAUSE = 3
@@ -312,7 +312,7 @@ class FileDownload:
             return
 
         try:
-            file = open(os.path.join(dirname,f'data/{self.file_name}'), 'rb')
+            file = open(os.path.join(dirname, f'data/{self.file_name}'), 'rb')
         except IOError:
             print('Unable to open  file')
             self.shut_down()
@@ -384,7 +384,6 @@ class FileDownload:
         Shutting down this file downloader
         :return: None
         """
-        self.socket.shutdown(socket.SHUT_RDWR)
         self.state = FileDownload.END
         self.socket.close()
         self.finish_callback()

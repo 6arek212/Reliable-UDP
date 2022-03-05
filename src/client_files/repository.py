@@ -14,6 +14,7 @@ class Repository:
     def __init__(self, callback, controller_callback) -> None:
         self.sock = None
         self.name = None
+        self.my_ip = None
         self.controller_callback = controller_callback
         self.is_connected = False
         self.fr = None
@@ -28,6 +29,7 @@ class Repository:
         try:
             self.sock.connect((mip, port))
             self.sock.send(f'{{"name": "{name}","type":"connect"}}\0'.encode())
+            self.my_ip = self.sock.getsockname()[0]
             self.is_connected = True
             self.callback(UIEvents.Connect(True))
             self.controller_callback(UIEvents.Connect(True))
@@ -117,7 +119,7 @@ class Repository:
             raise Exception('you need to connect to the server_files first ! or check filename')
         if self.fr is not None and self.fr.state != FileRepository.DONE:
             return
-        self.fr = FileRepository(self.sock, self.callback)
+        self.fr = FileRepository(self.sock, self.my_ip, self.callback)
         self.fr.get_file(filename)
 
     def pause_download(self):
