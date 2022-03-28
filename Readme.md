@@ -1,4 +1,4 @@
-# Messgeger App & Reliable UDP File Transfer  
+# Messenger App & Reliable UDP File Transfer  
 
 ![Builds](https://github.com/project-chip/connectedhomeip/workflows/Builds/badge.svg)
 
